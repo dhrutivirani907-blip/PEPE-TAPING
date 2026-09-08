@@ -374,11 +374,11 @@
         <!-- ADMIN PANEL SCREEN -->
         <div id="admin-screen" class="screen">
             <div class="balance-header">
-                <div class="balance-title">ADMIN DASHBOARD</div>
+                <div class="balance-title">PEPE ADMIN DASHBOARD</div>
                 <div class="balance-amount" style="font-size: 24px;">Withdrawal Requests</div>
             </div>
 
-            <button class="btn" style="width: auto; padding: 8px 16px; margin-bottom: 15px;" onclick="fetchWithdrawals()">🔄 Refresh Requests</button>
+            <button class="btn" style="width: auto; padding: 8px 16px; margin-bottom: 15px;" onclick="fetchWithdrawals()">🔄 Refresh PEPE Requests</button>
 
             <table class="admin-table">
                 <thead>
@@ -390,7 +390,7 @@
                     </tr>
                 </thead>
                 <tbody id="withdrawal-list">
-                    <tr><td colspan="4" style="text-align:center;">Loading requests...</td></tr>
+                    <tr><td colspan="4" style="text-align:center;">Loading PEPE requests...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -409,6 +409,7 @@
         const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
         const TASK_1_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
         const BACKEND_URL = "https://pepe-backend-wkym.onrender.com"; 
+        const APP_NAME = "PEPE";
         const MAX_XP = 2000;
         
         let balance = parseInt(localStorage.getItem('pepe_balance'));
@@ -473,7 +474,7 @@
                 fetch(`${BACKEND_URL}/api/recharge-energy`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ energyAmount: 200 })
+                    body: JSON.stringify({ energyAmount: 200, appName: APP_NAME })
                 }).catch(err => console.log('Backend sync skipped'));
 
                 alert("⚡ +200 XP Energy Added!");
@@ -600,7 +601,7 @@
             fetch(`${BACKEND_URL}/api/withdraw`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ binanceId, amount, currentBalance: balance })
+                body: JSON.stringify({ binanceId, amount, appName: APP_NAME })
             })
             .then(res => res.json())
             .then(data => {
@@ -612,7 +613,7 @@
                     return;
                 }
                 
-                alert("✅ Withdrawal Request Submitted!");
+                alert("✅ PEPE Withdrawal Request Submitted!");
                 binanceIdInput.value = '';
                 amountInput.value = '';
             })
@@ -631,16 +632,16 @@
 
         function fetchWithdrawals() {
             const listElement = document.getElementById('withdrawal-list');
-            listElement.innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>`;
+            listElement.innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading PEPE requests...</td></tr>`;
 
-            fetch(`${BACKEND_URL}/api/withdrawals`)
+            fetch(`${BACKEND_URL}/api/withdrawals?app=${APP_NAME}`)
             .then(res => {
                 if (!res.ok) throw new Error("HTTP error " + res.status);
                 return res.json();
             })
             .then(data => {
                 if (!data || data.length === 0) {
-                    listElement.innerHTML = `<tr><td colspan="4" style="text-align:center;">No pending requests found.</td></tr>`;
+                    listElement.innerHTML = `<tr><td colspan="4" style="text-align:center;">No pending PEPE requests found.</td></tr>`;
                     return;
                 }
 
@@ -652,8 +653,8 @@
                             <td>${item.amount} PEPE</td>
                             <td>${item.status || 'Pending'}</td>
                             <td>
-                                <button class="btn-sm btn-approve" onclick="updateStatus('${item._id || item.id}', 'Approved')">✓</button>
-                                <button class="btn-sm btn-reject" style="background:var(--red); color:#fff;" onclick="updateStatus('${item._id || item.id}', 'Rejected')">✗</button>
+                                <button class="btn-sm btn-approve" onclick="updateStatus('${item.id}', 'Approved')">✓</button>
+                                <button class="btn-sm btn-reject" style="background:var(--red); color:#fff;" onclick="updateStatus('${item.id}', 'Rejected')">✗</button>
                             </td>
                         </tr>
                     `;
