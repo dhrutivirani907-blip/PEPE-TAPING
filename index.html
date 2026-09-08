@@ -255,6 +255,43 @@
       cursor: pointer;
     }
 
+    /* Task Item Styles */
+    .task-item {
+      background: #2c2c2e;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .task-title {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .task-reward {
+      font-size: 12px;
+      color: #34C759;
+    }
+
+    .task-action-btn {
+      background: #34C759;
+      color: #000;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .task-action-btn.claimed {
+      background: #444;
+      color: #8E8E93;
+      cursor: default;
+    }
+
     /* Admin View Specifics */
     #admin-view {
       display: none;
@@ -336,11 +373,28 @@
 
     <div class="actions-grid">
       <button class="btn" onclick="openModal('withdraw-modal')">💸 Withdraw</button>
-      <button class="btn" onclick="alert('Task section coming soon!')">🎯 Task</button>
+      <button class="btn" onclick="openModal('task-modal')">🎯 Task</button>
     </div>
 
-    <!-- Watch Ads Button (+200 XP) -->
-    <button class="btn-ads" onclick="watchAd()">🎬 Watch Ads (+200 XP)</button>
+    <!-- Watch Ads Button (+200 XP) with Timer -->
+    <button class="btn-ads" id="ad-btn" onclick="watchAdWithTimer()">🎬 Watch Ads (+200 XP)</button>
+  </div>
+
+  <!-- Task Modal -->
+  <div class="modal" id="task-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Tasks</h3>
+        <span class="close-btn" onclick="closeModal('task-modal')">&times;</span>
+      </div>
+      <div class="task-item">
+        <div>
+          <div class="task-title">Dogs Reffer</div>
+          <div class="task-reward">+200 PEPE</div>
+        </div>
+        <button id="dogs-task-btn" class="task-action-btn" onclick="handleDogsTask()">Join</button>
+      </div>
+    </div>
   </div>
 
   <!-- Admin View -->
@@ -362,7 +416,7 @@
       </div>
       <div class="input-group">
         <label>Amount (PEPE Tokens)</label>
-        <input type="number" id="withdraw-amount-input" placeholder="Min 10,000">
+        <input type="number" id="withdraw-amount-input" placeholder="Min 1,000">
       </div>
       <button class="submit-btn" onclick="submitWithdrawal()">Submit Request</button>
     </div>
@@ -370,6 +424,8 @@
 
   <script>
     const BACKEND_URL = "https://pepe-backend-wkym.onrender.com";
+    const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
+    const DOGS_TELEGRAM_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
 
     // Game LocalStorage Keys
     let balance = parseInt(localStorage.getItem('pepe_balance')) || 0;
@@ -377,13 +433,17 @@
     if (isNaN(xp)) xp = 0; // Starts at 0 XP
     const maxXP = 2000;
 
+    let isAdVerifying = false;
+
     // DOM Elements
     const balanceDisplay = document.getElementById('balance-display');
     const energyDisplay = document.getElementById('energy-display');
     const energyBar = document.getElementById('energy-bar');
     const tapBtn = document.getElementById('tap-btn');
+    const adBtn = document.getElementById('ad-btn');
 
     updateUI();
+    initTaskUI();
 
     // 1 Click = Deduct 10 XP, Add 1 PEPE Coin
     tapBtn.addEventListener('click', (e) => {
@@ -400,16 +460,77 @@
       createFloatingText(e, "+1 PEPE");
     });
 
-    // Watch Ad Function (+200 XP)
-    function watchAd() {
-      if (xp + 200 > maxXP) {
-        xp = maxXP;
-      } else {
-        xp += 200;
+    // 1. WATCH AD WITH 5-SECOND VERIFICATION TIMER
+    function watchAdWithTimer() {
+      if (isAdVerifying) return;
+
+      // Open Ad link in new tab
+      window.open(ADSTERRA_LINK, '_blank');
+
+      isAdVerifying = true;
+      let timeLeft = 5;
+      adBtn.innerText = `⏳ Verifying... (${timeLeft}s)`;
+      adBtn.style.opacity = '0.7';
+
+      const timer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft > 0) {
+          adBtn.innerText = `⏳ Verifying... (${timeLeft}s)`;
+        } else {
+          clearInterval(timer);
+          isAdVerifying = false;
+          adBtn.innerText = "🎬 Watch Ads (+200 XP)";
+          adBtn.style.opacity = '1';
+
+          // Reward XP
+          if (xp + 200 > maxXP) {
+            xp = maxXP;
+          } else {
+            xp += 200;
+          }
+          saveState();
+          updateUI();
+          alert('Ad Verified! +200 XP added.');
+        }
+      }, 1000);
+    }
+
+    // 2. DOGS REFFER TASK LOGIC
+    let dogsTaskStatus = localStorage.getItem('dogs_task_status') || 'join'; // 'join', 'claim', 'claimed'
+
+    function initTaskUI() {
+      const taskBtn = document.getElementById('dogs-task-btn');
+      if (dogsTaskStatus === 'claim') {
+        taskBtn.innerText = 'Claim';
+        taskBtn.style.background = '#FF9500';
+      } else if (dogsTaskStatus === 'claimed') {
+        taskBtn.innerText = 'Claimed';
+        taskBtn.classList.add('claimed');
+        taskBtn.onclick = null;
       }
-      saveState();
-      updateUI();
-      alert('You watched an ad! +200 XP added to your balance.');
+    }
+
+    function handleDogsTask() {
+      const taskBtn = document.getElementById('dogs-task-btn');
+
+      if (dogsTaskStatus === 'join') {
+        window.open(DOGS_TELEGRAM_LINK, '_blank');
+        dogsTaskStatus = 'claim';
+        localStorage.setItem('dogs_task_status', 'claim');
+        taskBtn.innerText = 'Claim';
+        taskBtn.style.background = '#FF9500';
+      } else if (dogsTaskStatus === 'claim') {
+        balance += 200;
+        dogsTaskStatus = 'claimed';
+        localStorage.setItem('dogs_task_status', 'claimed');
+        saveState();
+        updateUI();
+
+        taskBtn.innerText = 'Claimed';
+        taskBtn.classList.add('claimed');
+        taskBtn.onclick = null;
+        alert('Task Completed! +200 PEPE Coins added to your balance.');
+      }
     }
 
     function updateUI() {
@@ -438,13 +559,13 @@
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // ---------------- WITHDRAWAL SUBMISSION (ADMIN UNTOUCHED) ----------------
+    // 3. WITHDRAWAL SUBMISSION (MINIMUM 1,000 PEPE)
     async function submitWithdrawal() {
       const binanceId = document.getElementById('binance-id-input').value.trim();
       const amount = parseInt(document.getElementById('withdraw-amount-input').value);
 
       if (!binanceId) return alert('Please enter Binance Pay ID');
-      if (!amount || amount < 10000) return alert('Minimum withdrawal is 10,000 PEPE');
+      if (!amount || amount < 1000) return alert('Minimum withdrawal is 1,000 PEPE');
       if (amount > balance) return alert('Insufficient balance!');
 
       let userId = localStorage.getItem('user_id');
