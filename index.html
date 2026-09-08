@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    
+    <!-- AUTOMATIC CACHE DISABLE FOR MOBILE APPS -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <title>PEPE Tap & Earn</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #060b07;
+            --card-bg: #102215;
+            --pepe-green: #00ff66;
+            --pepe-dark-green: #0a471f;
+            --green-gradient: linear-gradient(135deg, #00ff66 0%, #00b347 100%);
+            --text-color: #ffffff;
+            --text-muted: #a3c2ac;
+            --border-color: #1a3d24;
+            --red: #dc3545;
+            --blue: #0088cc;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .container {
+            flex: 1;
+            padding: 20px;
+            margin-bottom: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .balance-header {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .balance-title {
+            font-size: 14px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .balance-amount {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--pepe-green);
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
+        }
+
+        .tap-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .coin-btn {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #10331a 0%, #05140a 100%);
+            border: 4px solid var(--pepe-green);
+            box-shadow: 0 0 35px rgba(0, 255, 102, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.05s ease;
+        }
+
+        .coin-btn:active {
+            transform: scale(0.94);
+        }
+
+        .coin-img {
+            width: 165px;
+            height: 165px;
+            border-radius: 50%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+
+        .energy-box {
+            width: 100%;
+            max-width: 320px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .energy-text {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--pepe-green);
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #0d1a10;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--green-gradient);
+            transition: width 0.2s ease;
+            box-shadow: 0 0 8px rgba(0, 255, 102, 0.5);
+        }
+
+        .btn {
+            width: 100%;
+            max-width: 320px;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            background: var(--green-gradient);
+            color: #021206;
+            box-shadow: 0 4px 15px rgba(0, 255, 102, 0.2);
+            margin-top: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:disabled {
+            background: #122116 !important;
+            color: #435e4a !important;
+            box-shadow: none;
+            cursor: not-allowed;
+            border: 1px solid #1a2f20;
+        }
+
+        .btn-sm {
+            padding: 8px 14px;
+            font-size: 13px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .btn-start { background: var(--pepe-green); }
+        .btn-approve { background: var(--pepe-green); }
+        .btn-done { background: #1a2d1f; color: #52755a; cursor: not-allowed; }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            background: #07120a;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--pepe-green);
+        }
+
+        .navbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #050a06;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            z-index: 999;
+        }
+
+        .nav-item {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+
+        .nav-item.active {
+            color: var(--pepe-green);
+        }
+
+        .screen { display: none; width: 100%; }
+        .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+        .admin-table {
+            width: 100%;
+            max-width: 500px;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        .admin-table th, .admin-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .admin-table th {
+            color: var(--pepe-green);
+            background: #08140b;
+        }
+
+        .task-list {
+            width: 100%;
+            max-width: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .task-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-info h4 {
+            margin: 0 0 5px 0;
+            font-size: 15px;
+            color: #fff;
+        }
+
+        .task-info p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--pepe-green);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- HOME SCREEN -->
+        <div id="home-screen" class="screen active">
+            <div class="balance-header">
+                <div class="balance-title">PEPE BALANCE</div>
+                <div class="balance-amount">
+                    🐸 <span id="balance-val">0</span>
+                </div>
+            </div>
+
+            <div class="tap-area">
+                <div class="coin-btn" id="coin-btn" onclick="handleTap()">
+                    <img src="photo_2026-09-08_18-06-46.jpg" alt="PEPE" class="coin-img" onerror="this.src='https://cryptologos.cc/logos/pepe-pepe-logo.png'">
+                </div>
+            </div>
+
+            <div class="energy-box">
+                <div class="energy-text">⚡ <span id="xp-val">0</span> / 2000</div>
+                <div class="progress-bar">
+                    <div id="xp-fill" class="progress-fill"></div>
+                </div>
+            </div>
+
+            <button id="ad-btn" class="btn" onclick="watchAdForEnergy()" disabled>
+                Watch Ads (+200 XP)
+            </button>
+        </div>
+
+        <!-- TASKS SCREEN -->
+        <div id="tasks-screen" class="screen">
+            <div class="balance-header" style="margin-bottom: 20px;">
+                <div class="balance-title">EARN EXTRA PEPE</div>
+                <div class="balance-amount" style="font-size: 28px;">Complete Tasks</div>
+            </div>
+
+            <div class="task-list">
+                <div class="task-card">
+                    <div class="task-info">
+                        <h4>Join QuickDogs Bot</h4>
+                        <p>+200 PEPE</p>
+                    </div>
+                    <button id="task-btn-quickdogs" class="btn-sm btn-start" onclick="handleTaskAction('quickdogs', 200, TASK_1_LINK)">Join</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- WITHDRAW SCREEN -->
+        <div id="withdraw-screen" class="screen">
+            <div class="balance-header" style="margin-bottom: 20px;">
+                <div class="balance-title">WITHDRAW BALANCE</div>
+                <div class="balance-amount">
+                    <span id="withdraw-balance-val">0</span> PEPE
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="input-group">
+                    <label>Binance Pay ID / User ID</label>
+                    <input type="text" id="binance-id" placeholder="Enter your Binance ID">
+                </div>
+
+                <div class="input-group">
+                    <label>Amount (Min: 1,000 PEPE)</label>
+                    <input type="number" id="withdraw-amount" placeholder="Min 1000">
+                </div>
+
+                <button id="withdraw-btn" class="btn" onclick="submitWithdrawal()">Withdraw Now</button>
+            </div>
+        </div>
+
+        <!-- ADMIN PANEL SCREEN -->
+        <div id="admin-screen" class="screen">
+            <div class="balance-header">
+                <div class="balance-title">ADMIN DASHBOARD</div>
+                <div class="balance-amount" style="font-size: 24px;">Withdrawal Requests</div>
+            </div>
+
+            <button class="btn" style="width: auto; padding: 8px 16px; margin-bottom: 15px;" onclick="fetchWithdrawals()">🔄 Refresh Requests</button>
+
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Binance ID</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="withdrawal-list">
+                    <tr><td colspan="4" style="text-align:center;">Loading requests...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- NAVBAR -->
+    <div class="navbar" id="main-navbar">
+        <div class="nav-item active" id="nav-home" onclick="switchScreen('home-screen', 'nav-home')">HOME</div>
+        <div class="nav-item" id="nav-tasks" onclick="switchScreen('tasks-screen', 'nav-tasks')">TASKS</div>
+        <div class="nav-item" id="nav-withdraw" onclick="switchScreen('withdraw-screen', 'nav-withdraw')">WITHDRAW</div>
+        <div class="nav-item" id="nav-admin" style="display:none;" onclick="switchScreen('admin-screen', 'nav-admin')">ADMIN</div>
+    </div>
+
+    <script>
+        const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
+        const TASK_1_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
+        const BACKEND_URL = "https://pepe-backend-wkym.onrender.com"; 
+        const MAX_XP = 2000;
+        
+        let balance = parseInt(localStorage.getItem('pepe_balance'));
+        if (isNaN(balance) || balance < 0) balance = 0;
+
+        let xp = parseInt(localStorage.getItem('pepe_xp'));
+        if (isNaN(xp) || xp < 0) xp = 0;
+        if (xp > MAX_XP) xp = MAX_XP;
+
+        let isWaitingForAd = false;
+        let adStartTime = 0;
+        let isWithdrawSubmitting = false;
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+
+        function updateUI() {
+            document.getElementById('balance-val').innerText = balance.toLocaleString();
+            document.getElementById('withdraw-balance-val').innerText = balance.toLocaleString();
+            document.getElementById('xp-val').innerText = xp;
+            
+            let fillPercentage = Math.max(0, Math.min(100, (xp / MAX_XP) * 100));
+            document.getElementById('xp-fill').style.width = fillPercentage + '%';
+
+            const adBtn = document.getElementById('ad-btn');
+            if (xp <= 1800) {
+                adBtn.disabled = false;
+            } else {
+                adBtn.disabled = true;
+            }
+
+            updateTaskButtons();
+        }
+
+        function handleTap() {
+            if (xp >= 10) {
+                balance += 1;
+                xp -= 10;
+                
+                localStorage.setItem('pepe_balance', balance);
+                localStorage.setItem('pepe_xp', xp);
+                
+                updateUI();
+            } else {
+                alert("Out of Energy! Watch Ads to gain 200 XP.");
+            }
+        }
+
+        function checkAndProcessAdReward() {
+            if (!isWaitingForAd) return;
+
+            const timeSpent = (Date.now() - adStartTime) / 1000;
+            isWaitingForAd = false;
+
+            if (timeSpent >= 3) {
+                xp = Math.min(MAX_XP, xp + 200);
+                localStorage.setItem('pepe_xp', xp);
+                updateUI();
+
+                fetch(`${BACKEND_URL}/api/recharge-energy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ energyAmount: 200 })
+                }).catch(err => console.log('Backend sync skipped'));
+
+                alert("⚡ +200 XP Energy Added!");
+            } else {
+                alert("⚠️ Please view the ad for at least 3 seconds to claim energy!");
+            }
+        }
+
+        function watchAdForEnergy() {
+            if (xp > 1800) return;
+
+            isWaitingForAd = true;
+            adStartTime = Date.now();
+
+            openExternalLink(ADSTERRA_LINK);
+        }
+
+        function handleTaskAction(taskId, reward, linkUrl) {
+            const status = localStorage.getItem(`pepe_task_${taskId}`);
+
+            if (status === 'claimed') return;
+
+            if (status === 'visited') {
+                balance += reward;
+                localStorage.setItem('pepe_balance', balance);
+                localStorage.setItem(`pepe_task_${taskId}`, 'claimed');
+                updateUI();
+                alert(`✅ Task Completed! You earned ${reward} PEPE.`);
+            } else {
+                localStorage.setItem(`pepe_task_${taskId}`, 'visited');
+                updateTaskButtons();
+                openExternalLink(linkUrl);
+            }
+        }
+
+        function updateTaskButtons() {
+            ['quickdogs'].forEach(taskId => {
+                const btn = document.getElementById(`task-btn-${taskId}`);
+                if (!btn) return;
+
+                const status = localStorage.getItem(`pepe_task_${taskId}`);
+
+                if (status === 'claimed') {
+                    btn.innerText = 'Claimed ✅';
+                    btn.className = 'btn-sm btn-done';
+                    btn.disabled = true;
+                } else if (status === 'visited') {
+                    btn.innerText = 'Claim';
+                    btn.className = 'btn-sm btn-approve';
+                    btn.disabled = false;
+                } else {
+                    btn.innerText = 'Join';
+                    btn.className = 'btn-sm btn-start';
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        function openExternalLink(url) {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                window.Telegram.WebApp.openLink(url);
+            } else {
+                window.open(url, '_blank');
+            }
+        }
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.onEvent('activated', () => checkAndProcessAdReward());
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') checkAndProcessAdReward();
+        });
+
+        window.addEventListener('focus', () => checkAndProcessAdReward());
+
+        function switchScreen(screenId, navId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            document.getElementById(screenId).classList.add('active');
+            if (document.getElementById(navId)) {
+                document.getElementById(navId).classList.add('active');
+            }
+            
+            if (screenId === 'admin-screen') {
+                fetchWithdrawals();
+            } else {
+                updateUI();
+            }
+        }
+
+        function submitWithdrawal() {
+            if (isWithdrawSubmitting) return;
+
+            const btn = document.getElementById('withdraw-btn');
+            const binanceIdInput = document.getElementById('binance-id');
+            const amountInput = document.getElementById('withdraw-amount');
+
+            const binanceId = binanceIdInput.value.trim();
+            const amount = parseInt(amountInput.value);
+
+            if (!binanceId) {
+                alert("Please enter your Binance ID!");
+                return;
+            }
+            if (isNaN(amount) || amount < 1000) {
+                alert("Minimum withdrawal is 1,000 PEPE!");
+                return;
+            }
+            if (balance <= 0 || amount > balance) {
+                alert("❌ Insufficient PEPE balance!");
+                return;
+            }
+
+            isWithdrawSubmitting = true;
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            balance -= amount;
+            localStorage.setItem('pepe_balance', balance);
+            updateUI();
+
+            fetch(`${BACKEND_URL}/api/withdraw`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ binanceId, amount, currentBalance: balance })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    balance += amount;
+                    localStorage.setItem('pepe_balance', balance);
+                    updateUI();
+                    alert("❌ " + data.message);
+                    return;
+                }
+                
+                alert("✅ Withdrawal Request Submitted!");
+                binanceIdInput.value = '';
+                amountInput.value = '';
+            })
+            .catch(err => {
+                balance += amount;
+                localStorage.setItem('pepe_balance', balance);
+                updateUI();
+                alert("❌ Network Error. Please try again.");
+            })
+            .finally(() => {
+                isWithdrawSubmitting = false;
+                btn.disabled = false;
+                btn.innerText = "Withdraw Now";
+            });
+        }
+
+        function fetchWithdrawals() {
+            const listElement = document.getElementById('withdrawal-list');
+            listElement.innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>`;
+
+            fetch(`${BACKEND_URL}/api/withdrawals`)
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (!data || data.length === 0) {
+                    listElement.innerHTML = `<tr><td colspan="4" style="text-align:center;">No pending requests found.</td></tr>`;
+                    return;
+                }
+
+                let rowsHtml = '';
+                data.forEach(item => {
+                    rowsHtml += `
+                        <tr>
+                            <td>${item.binanceId}</td>
+                            <td>${item.amount} PEPE</td>
+                            <td>${item.status || 'Pending'}</td>
+                            <td>
+                                <button class="btn-sm btn-approve" onclick="updateStatus('${item._id || item.id}', 'Approved')">✓</button>
+                                <button class="btn-sm btn-reject" style="background:var(--red); color:#fff;" onclick="updateStatus('${item._id || item.id}', 'Rejected')">✗</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                listElement.innerHTML = rowsHtml;
+            })
+            .catch(err => {
+                console.error(err);
+                listElement.innerHTML = `<tr><td colspan="4" style="text-align:center; color: red;">Failed to load data from backend.</td></tr>`;
+            });
+        }
+
+        function updateStatus(id, newStatus) {
+            fetch(`${BACKEND_URL}/api/withdrawals/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(res => res.json())
+            .then(() => {
+                alert(`Status updated to ${newStatus}`);
+                fetchWithdrawals();
+            })
+            .catch(() => alert("Failed to update status"));
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdmin = urlParams.get('admin') === 'true' || window.location.hash === '#admin';
+
+            if (isAdmin) {
+                document.getElementById('nav-admin').style.display = 'block';
+                switchScreen('admin-screen', 'nav-admin');
+            } else {
+                updateUI();
+            }
+        });
+    </script>
+</body>
+</html>
