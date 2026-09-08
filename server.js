@@ -4,14 +4,33 @@ const cors = require('cors');
 const { Pool } = require('pg');
 
 const app = express();
-app.use(cors());
+
+// ------------------- CORS FIX CONFIGURATION -------------------
+// GitHub Pages aur baaki sabhi domains se request allow karne ke liye
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Extra Safety Headers (CORS Block se bachne ke liye)
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json());
 
-// PostgreSQL Pool Connection Setup
+// ------------------- DATABASE CONNECTION -------------------
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Required for Render & Neon PostgreSQL
+    rejectUnauthorized: false // Render & Neon PostgreSQL ke liye zaroori hai
   }
 });
 
@@ -30,21 +49,12 @@ const initDb = async () => {
       );
     `);
 
-    // 2. Schema Check: Agar app_name column missing ho toh usse add karein
-    const colCheck = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'withdrawals' AND column_name = 'app_name';
+    // 2. Safe Column Add (Agar app_name pehle se nahi hai)
+    await pool.query(`
+      ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS app_name VARCHAR(50) DEFAULT 'PEPE';
     `);
 
-    if (colCheck.rows.length === 0) {
-      await pool.query(`
-        ALTER TABLE withdrawals ADD COLUMN app_name VARCHAR(50) DEFAULT 'PEPE';
-      `);
-      console.log("Migration: Added 'app_name' column to 'withdrawals' table.");
-    }
-
-    console.log("Database initialized & ready!");
+    console.log("Database initialized successfully & ready!");
   } catch (err) {
     console.error("Database initialization failed:", err);
   }
