@@ -427,15 +427,19 @@
     const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
     const DOGS_TELEGRAM_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
 
-    // Game LocalStorage Keys
-    let balance = parseInt(localStorage.getItem('pepe_balance')) || 0;
+    // Game LocalStorage Keys (Strict Parse to Number)
+    let balance = parseInt(localStorage.getItem('pepe_balance'));
+    if (isNaN(balance)) balance = 0;
+
     let xp = parseInt(localStorage.getItem('pepe_xp'));
     if (isNaN(xp)) xp = 0;
+
     const maxXP = 2000;
 
-    // Strict Ad Verification Variables
-    let adStartTime = 0;
+    // Timer Variables
     let isAdActive = false;
+    let adCountdownTimer = null;
+    let userLeftEarly = false;
 
     // DOM Elements
     const balanceDisplay = document.getElementById('balance-display');
@@ -447,7 +451,7 @@
     updateUI();
     initTaskUI();
 
-    // 1 Click = Deduct 10 XP, Add 1 PEPE Coin
+    // FIXED: 1 Click = Deduct 10 XP, Add 1 PEPE Coin
     tapBtn.addEventListener('click', (e) => {
       if (xp < 10) {
         alert('Not enough XP! Watch Ads to get +200 XP.');
@@ -462,43 +466,48 @@
       createFloatingText(e, "+1 PEPE");
     });
 
-    // STRICT AD WATCH LOGIC (7 SECONDS CHECK)
+    // FIXED: STRICT 7-SECOND REALTIME TIMER FOR ADS
     function watchAdWithStrictTimer() {
       if (isAdActive) return;
 
       isAdActive = true;
-      adStartTime = Date.now();
-
-      adBtn.innerText = "⏳ Watching Ad...";
-      adBtn.style.opacity = '0.7';
+      userLeftEarly = false;
 
       window.open(ADSTERRA_LINK, '_blank');
+
+      let secondsLeft = 7;
+      adBtn.innerText = `⏳ Verifying Ad (${secondsLeft}s)...`;
+      adBtn.style.opacity = '0.7';
+
+      adCountdownTimer = setInterval(() => {
+        secondsLeft--;
+
+        if (secondsLeft > 0) {
+          adBtn.innerText = `⏳ Verifying Ad (${secondsLeft}s)...`;
+        } else {
+          clearInterval(adCountdownTimer);
+          isAdActive = false;
+          adBtn.innerText = "🎬 Watch Ads (+200 XP)";
+          adBtn.style.opacity = '1';
+
+          if (!userLeftEarly) {
+            // Reward XP if user didn't switch back early
+            xp = Math.min(maxXP, xp + 200);
+            saveState();
+            updateUI();
+            alert('Ad Verified! +200 XP added.');
+          } else {
+            alert('Verification Failed! You came back too quickly.');
+          }
+        }
+      }, 1000);
     }
 
-    // Detect when user comes back to the app tab
+    // Detect Tab Switch
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && isAdActive) {
-        const timeSpent = (Date.now() - adStartTime) / 1000; // in seconds
-
-        if (timeSpent >= 7) {
-          // Success: Spent 7+ seconds
-          if (xp + 200 > maxXP) {
-            xp = maxXP;
-          } else {
-            xp += 200;
-          }
-          saveState();
-          updateUI();
-          alert('Ad Verified successfully! +200 XP added.');
-        } else {
-          // Failed: Returned too early
-          alert('Verification Failed! You must watch the ad for at least 7 seconds.');
-        }
-
-        // Reset Button State
-        isAdActive = false;
-        adBtn.innerText = "🎬 Watch Ads (+200 XP)";
-        adBtn.style.opacity = '1';
+        // User came back while timer was running
+        userLeftEarly = true;
       }
     });
 
