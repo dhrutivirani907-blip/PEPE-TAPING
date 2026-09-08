@@ -6,14 +6,12 @@ const { Pool } = require('pg');
 const app = express();
 
 // ------------------- CORS FIX CONFIGURATION -------------------
-// GitHub Pages aur baaki sabhi domains se request allow karne ke liye
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Extra Safety Headers (CORS Block se bachne ke liye)
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
@@ -30,31 +28,36 @@ app.use(express.json());
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Render & Neon PostgreSQL ke liye zaroori hai
+    rejectUnauthorized: false // Render & Neon PostgreSQL ke liye
   }
 });
 
-// Database Initialization & Automatic Table Migration
+// Database Initialization & Automatic Migration
 const initDb = async () => {
   try {
-    // 1. Withdrawals Table Create Karein (Agar nahi hai)
+    // 1. Withdrawals Table Create Karein (Complete Schema ke saath)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS withdrawals (
-        id SERIAL PRIMARY KEY,
-        binance_id VARCHAR(100) NOT NULL,
-        amount NUMERIC NOT NULL,
-        status VARCHAR(20) DEFAULT 'pending',
-        app_name VARCHAR(50) DEFAULT 'PEPE',
+        id VARCHAR(100) PRIMARY KEY,
+        user_id VARCHAR(100),
+        binance_id VARCHAR(255),
+        wallet VARCHAR(255),
+        amount NUMERIC,
+        type VARCHAR(50),
+        total_deduct VARCHAR(100),
+        status VARCHAR(50) DEFAULT 'Pending',
+        app VARCHAR(50) DEFAULT 'PEPE',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
-    // 2. Safe Column Add (Agar app_name pehle se nahi hai)
-    await pool.query(`
-      ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS app_name VARCHAR(50) DEFAULT 'PEPE';
-    `);
+    // 2. Safe Migration (Agar purani table me naye columns na ho)
+    await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS user_id VARCHAR(100);`);
+    await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS wallet VARCHAR(255);`);
+    await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS type VARCHAR(50);`);
+    await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS app VARCHAR(50) DEFAULT 'PEPE';`);
 
-    console.log("Database initialized successfully & ready!");
+    console.log("Database schema initialized and synced successfully!");
   } catch (err) {
     console.error("Database initialization failed:", err);
   }
@@ -67,21 +70,27 @@ initDb();
 // 1. Create Withdrawal Request
 app.post('/api/withdraw', async (req, res) => {
   try {
-    const { binanceId, amount, appName } = req.body;
+    const { id, userId, binanceId, wallet, amount, type, totalDeduct, appName } = req.body;
 
-    if (!binanceId || !amount) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
-    }
-
-    const app = (appName || 'PEPE').trim().toUpperCase();
+    const reqId = id || Date.now().toString();
+    const reqUserId = userId || 'N/A';
+    const reqWallet = wallet || binanceId || 'N/A';
+    const reqAmount = amount || 0;
+    const reqType = type || 'Binance';
+    const reqDeduct = totalDeduct || reqAmount.toString();
+    const app = (appName || req.body.app || 'PEPE').trim().toUpperCase();
 
     const insertQuery = `
-      INSERT INTO withdrawals (binance_id, amount, status, app_name)
-      VALUES ($1, $2, 'pending', $3)
-      RETURNING id, binance_id AS "binanceId", amount, status, app_name AS "appName", created_at;
+      INSERT INTO withdrawals (id, user_id, binance_id, wallet, amount, type, total_deduct, status, app, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending', $8, NOW())
+      RETURNING id, user_id AS "userId", binance_id AS "binanceId", wallet, amount, type, 
+                total_deduct AS "totalDeduct", status, app, created_at;
     `;
 
-    const result = await pool.query(insertQuery, [binanceId, amount, app]);
+    const result = await pool.query(insertQuery, [
+      reqId, reqUserId, binanceId || reqWallet, reqWallet, reqAmount, reqType, reqDeduct, app
+    ]);
+
     res.json({ success: true, request: result.rows[0] });
 
   } catch (error) {
@@ -90,18 +99,37 @@ app.post('/api/withdraw', async (req, res) => {
   }
 });
 
-// 2. Get Withdrawal Requests Filtered by App (For Admin Panel)
+// 2. Get Withdrawal Requests Filtered by App
 app.get('/api/withdrawals', async (req, res) => {
   try {
-    const appName = (req.query.app || 'PEPE').trim().toUpperCase();
+    const appQuery = req.query.app ? req.query.app.trim().toUpperCase() : null;
 
-    const query = `
-      SELECT id, binance_id AS "binanceId", amount, status, app_name AS "appName", created_at 
-      FROM withdrawals 
-      WHERE UPPER(TRIM(app_name)) = $1 
-      ORDER BY created_at DESC;
+    let query = `
+      SELECT 
+        id, 
+        user_id AS "userId", 
+        binance_id AS "binanceId", 
+        wallet, 
+        amount, 
+        type, 
+        total_deduct AS "totalDeduct", 
+        status, 
+        COALESCE(app, 'PEPE') AS "app", 
+        created_at 
+      FROM withdrawals
     `;
-    const result = await pool.query(query, [appName]);
+    
+    let values = [];
+
+    // Agar URL me ?app=BONK ya ?app=PEPE bheja hai toh filter karein
+    if (appQuery && appQuery !== 'ALL') {
+      query += ` WHERE UPPER(TRIM(COALESCE(app, 'PEPE'))) = $1`;
+      values.push(appQuery);
+    }
+
+    query += ` ORDER BY created_at DESC;`;
+
+    const result = await pool.query(query, values);
     res.json(result.rows);
 
   } catch (error) {
@@ -115,9 +143,11 @@ app.post('/api/withdrawals/update-status', async (req, res) => {
   try {
     const { id, status } = req.body;
 
-    if (!id || !['approved', 'rejected', 'pending'].includes(status)) {
-      return res.status(400).json({ success: false, message: "Invalid payload" });
+    if (!id || !status) {
+      return res.status(400).json({ success: false, message: "Missing id or status" });
     }
+
+    const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 
     const updateQuery = `
       UPDATE withdrawals 
@@ -126,7 +156,7 @@ app.post('/api/withdrawals/update-status', async (req, res) => {
       RETURNING id, status;
     `;
 
-    const result = await pool.query(updateQuery, [status, id]);
+    const result = await pool.query(updateQuery, [formattedStatus, id.toString()]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: "Request not found" });
