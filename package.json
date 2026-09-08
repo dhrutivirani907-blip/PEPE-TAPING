@@ -1,7 +1,7 @@
 {
-  "name": "pepe-tapping-backend",
+  "name": "pepe-backend",
   "version": "1.0.0",
-  "description": "Backend for Pepe Tapping Telegram Web App",
+  "description": "Pepe Tapping App Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
