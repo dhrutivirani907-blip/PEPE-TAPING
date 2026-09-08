@@ -427,19 +427,18 @@
     const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
     const DOGS_TELEGRAM_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
 
-    // Game LocalStorage Keys (Strict Parse to Number)
-    let balance = parseInt(localStorage.getItem('pepe_balance'));
-    if (isNaN(balance)) balance = 0;
+    // Game LocalStorage Keys Validation
+    let balance = Number(localStorage.getItem('pepe_balance'));
+    if (isNaN(balance) || balance === null) balance = 0;
 
-    let xp = parseInt(localStorage.getItem('pepe_xp'));
-    if (isNaN(xp)) xp = 0;
+    let xp = Number(localStorage.getItem('pepe_xp'));
+    if (isNaN(xp) || xp === null) xp = 0;
 
     const maxXP = 2000;
 
-    // Timer Variables
+    // Strict Ad System Variables
     let isAdActive = false;
-    let adCountdownTimer = null;
-    let userLeftEarly = false;
+    let adStartTime = 0;
 
     // DOM Elements
     const balanceDisplay = document.getElementById('balance-display');
@@ -451,63 +450,54 @@
     updateUI();
     initTaskUI();
 
-    // FIXED: 1 Click = Deduct 10 XP, Add 1 PEPE Coin
+    // TAP HANDLER: 1 Click = -10 XP, +1 PEPE
     tapBtn.addEventListener('click', (e) => {
       if (xp < 10) {
         alert('Not enough XP! Watch Ads to get +200 XP.');
         return;
       }
 
-      xp -= 10;
-      balance += 1;
+      xp = Math.max(0, xp - 10);
+      balance = balance + 1;
 
       saveState();
       updateUI();
       createFloatingText(e, "+1 PEPE");
     });
 
-    // FIXED: STRICT 7-SECOND REALTIME TIMER FOR ADS
+    // AD CLICK HANDLER
     function watchAdWithStrictTimer() {
       if (isAdActive) return;
 
       isAdActive = true;
-      userLeftEarly = false;
+      adStartTime = Date.now();
 
-      window.open(ADSTERRA_LINK, '_blank');
-
-      let secondsLeft = 7;
-      adBtn.innerText = `⏳ Verifying Ad (${secondsLeft}s)...`;
+      adBtn.innerText = "⏳ Watching Ad... Stay 7s on Ad";
       adBtn.style.opacity = '0.7';
 
-      adCountdownTimer = setInterval(() => {
-        secondsLeft--;
-
-        if (secondsLeft > 0) {
-          adBtn.innerText = `⏳ Verifying Ad (${secondsLeft}s)...`;
-        } else {
-          clearInterval(adCountdownTimer);
-          isAdActive = false;
-          adBtn.innerText = "🎬 Watch Ads (+200 XP)";
-          adBtn.style.opacity = '1';
-
-          if (!userLeftEarly) {
-            // Reward XP if user didn't switch back early
-            xp = Math.min(maxXP, xp + 200);
-            saveState();
-            updateUI();
-            alert('Ad Verified! +200 XP added.');
-          } else {
-            alert('Verification Failed! You came back too quickly.');
-          }
-        }
-      }, 1000);
+      window.open(ADSTERRA_LINK, '_blank');
     }
 
-    // Detect Tab Switch
+    // STRICT TAB SWITCH & TIMESTAMP CHECK
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && isAdActive) {
-        // User came back while timer was running
-        userLeftEarly = true;
+        const timeSpent = (Date.now() - adStartTime) / 1000; // time in seconds
+
+        if (timeSpent >= 7) {
+          // Success: Spent 7+ seconds on ad
+          xp = Math.min(maxXP, xp + 200);
+          saveState();
+          updateUI();
+          alert('Ad Verified! +200 XP added.');
+        } else {
+          // Failed: Came back before 7 seconds
+          alert(`Verification Failed! You came back in ${Math.floor(timeSpent)}s. Please watch for at least 7 seconds.`);
+        }
+
+        // Reset Ad State
+        isAdActive = false;
+        adBtn.innerText = "🎬 Watch Ads (+200 XP)";
+        adBtn.style.opacity = '1';
       }
     });
 
@@ -552,7 +542,9 @@
     function updateUI() {
       balanceDisplay.innerText = balance.toLocaleString();
       energyDisplay.innerText = `${xp} / ${maxXP} XP`;
-      energyBar.style.width = `${(xp / maxXP) * 100}%`;
+      
+      const percentage = (xp / maxXP) * 100;
+      energyBar.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
     }
 
     function saveState() {
