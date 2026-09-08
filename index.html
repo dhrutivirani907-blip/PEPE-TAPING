@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PEPE Tapping Game</title>
+  <title>PEPE Tapping Game & Admin</title>
   <style>
     * {
       box-sizing: border-box;
@@ -265,8 +265,8 @@
     .amount-display { font-size: 18px; font-weight: bold; color: #34C759; margin: 8px 0; }
     .status-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
     .status-badge.pending { background: rgba(255, 149, 0, 0.2); color: #ff9500; }
-    .status-badge.approved { background: rgba(52, 199, 89, 0.2); color: #34C759; }
-    .status-badge.rejected { background: rgba(255, 59, 48, 0.2); color: #ff3b30; }
+    .status-badge.approved, .status-badge.Approved { background: rgba(52, 199, 89, 0.2); color: #34C759; }
+    .status-badge.rejected, .status-badge.Rejected { background: rgba(255, 59, 48, 0.2); color: #ff3b30; }
 
     .admin-actions {
       display: flex;
@@ -289,14 +289,14 @@
 </head>
 <body>
 
-  <!-- App Main Screen -->
+  <!-- User Game View -->
   <div id="user-view" class="app-container">
     <div class="header">
       <div class="title">PEPE TAPPING</div>
       <div class="balance-container">
         <span class="balance" id="balance-display">0</span>
       </div>
-      <div class="level-badge" id="level-display">Bronze Level</div>
+      <div class="level-badge">Bronze Level</div>
     </div>
 
     <div class="tap-area">
@@ -321,7 +321,7 @@
     </div>
   </div>
 
-  <!-- Admin Screen -->
+  <!-- Admin View -->
   <div id="admin-view">
     <h2 style="margin-bottom: 20px; text-align: center;">PEPE Admin Requests</h2>
     <div id="admin-requests-list">Loading...</div>
@@ -335,11 +335,11 @@
         <span class="close-btn" onclick="closeModal('withdraw-modal')">&times;</span>
       </div>
       <div class="input-group">
-        <label>Binance Pay ID</label>
+        <label>Binance Pay ID / Wallet</label>
         <input type="text" id="binance-id-input" placeholder="e.g. 123456789">
       </div>
       <div class="input-group">
-        <label>Amount (Tokens)</label>
+        <label>Amount (PEPE Tokens)</label>
         <input type="number" id="withdraw-amount-input" placeholder="Min 10,000">
       </div>
       <button class="submit-btn" onclick="submitWithdrawal()">Submit Request</button>
@@ -347,29 +347,22 @@
   </div>
 
   <script>
-    // CONFIGURATION (NEW RENDER BACKEND URL)
-    const APP_NAME = "PEPE"; // BONK App ke liye "BONK" karein
     const BACKEND_URL = "https://pepe-backend-wkym.onrender.com";
 
-    // LOCAL STORAGE KEYS (Unique to avoid clash)
-    const STORAGE_KEY_BALANCE = `${APP_NAME.toLowerCase()}_balance`;
-    const STORAGE_KEY_ENERGY = `${APP_NAME.toLowerCase()}_energy`;
-
-    // STATE VARIABLES
-    let balance = parseInt(localStorage.getItem(STORAGE_KEY_BALANCE)) || 0;
-    let energy = parseInt(localStorage.getItem(STORAGE_KEY_ENERGY)) || 1000;
+    // LocalStorage Keys
+    let balance = parseInt(localStorage.getItem('pepe_balance')) || 0;
+    let energy = parseInt(localStorage.getItem('pepe_energy')) || 1000;
     const maxEnergy = 1000;
 
-    // DOM ELEMENTS
+    // DOM Elements
     const balanceDisplay = document.getElementById('balance-display');
     const energyDisplay = document.getElementById('energy-display');
     const energyBar = document.getElementById('energy-bar');
     const tapBtn = document.getElementById('tap-btn');
 
-    // INITIAL RENDER
     updateUI();
 
-    // TAPPING LOGIC
+    // Tapping Event
     tapBtn.addEventListener('click', (e) => {
       if (energy <= 0) return;
 
@@ -381,7 +374,7 @@
       createFloatingText(e);
     });
 
-    // ENERGY REGENERATION (1 energy per second)
+    // Energy Regenerate (1 per sec)
     setInterval(() => {
       if (energy < maxEnergy) {
         energy += 1;
@@ -397,44 +390,53 @@
     }
 
     function saveState() {
-      localStorage.setItem(STORAGE_KEY_BALANCE, balance);
-      localStorage.setItem(STORAGE_KEY_ENERGY, energy);
+      localStorage.setItem('pepe_balance', balance);
+      localStorage.setItem('pepe_energy', energy);
     }
 
     function createFloatingText(e) {
       const rect = tapBtn.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
       const floatText = document.createElement('div');
       floatText.className = 'floating-text';
       floatText.innerText = '+1';
-      floatText.style.left = `${x}px`;
-      floatText.style.top = `${y}px`;
+      floatText.style.left = `${e.clientX - rect.left}px`;
+      floatText.style.top = `${e.clientY - rect.top}px`;
 
       tapBtn.appendChild(floatText);
-
       setTimeout(() => floatText.remove(), 800);
     }
 
-    // MODAL CONTROL
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // SUBMIT WITHDRAWAL TO BACKEND
+    // ---------------- WITHDRAWAL SUBMISSION ----------------
     async function submitWithdrawal() {
       const binanceId = document.getElementById('binance-id-input').value.trim();
       const amount = parseInt(document.getElementById('withdraw-amount-input').value);
 
       if (!binanceId) return alert('Please enter Binance Pay ID');
-      if (!amount || amount < 10000) return alert('Minimum withdrawal is 10,000 tokens');
+      if (!amount || amount < 10000) return alert('Minimum withdrawal is 10,000 PEPE');
       if (amount > balance) return alert('Insufficient balance!');
+
+      // Get or Generate unique User ID
+      let userId = localStorage.getItem('user_id');
+      if (!userId) {
+        userId = 'USER_' + Math.floor(100000 + Math.random() * 900000);
+        localStorage.setItem('user_id', userId);
+      }
 
       try {
         const response = await fetch(`${BACKEND_URL}/api/withdraw`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ binanceId, amount, appName: APP_NAME })
+          body: JSON.stringify({
+            userId: userId,
+            binanceId: binanceId,
+            wallet: binanceId,
+            amount: amount,
+            app: 'PEPE',
+            type: 'PEPE'
+          })
         });
 
         const data = await response.json();
@@ -444,7 +446,7 @@
           saveState();
           updateUI();
           closeModal('withdraw-modal');
-          alert('Withdrawal request submitted successfully!');
+          alert('PEPE withdrawal request submitted successfully!');
           document.getElementById('binance-id-input').value = '';
           document.getElementById('withdraw-amount-input').value = '';
         } else {
@@ -456,7 +458,7 @@
       }
     }
 
-    // ------------------- ADMIN PANEL LOGIC -------------------
+    // ---------------- ADMIN PANEL LOGIC ----------------
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('admin') === 'true') {
       document.getElementById('user-view').style.display = 'none';
@@ -466,7 +468,7 @@
 
     async function fetchAdminRequests() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/withdrawals?app=${APP_NAME}`);
+        const res = await fetch(`${BACKEND_URL}/api/withdrawals`);
         const requests = await res.json();
         renderAdminRequests(requests);
       } catch (err) {
@@ -484,34 +486,33 @@
       }
 
       container.innerHTML = requests.map(req => {
-        const appTagColor = (req.appName || '').toUpperCase() === 'BONK' ? '#ff9500' : '#007aff';
-        const appLabel = req.appName ? req.appName.toUpperCase() : 'PEPE';
+        const walletDisplay = req.wallet || req.binance_id || req.binanceId || 'N/A';
+        const currentStatus = req.status || 'Pending';
 
         return `
           <div class="admin-card">
             <div class="admin-card-header">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="user-id">ID: ${req.binanceId}</span>
+                <span class="user-id">ID: ${walletDisplay}</span>
                 <span style="
-                  background-color: ${appTagColor}; 
-                  color: white; 
+                  background-color: #34C759; 
+                  color: #000; 
                   font-size: 11px; 
                   font-weight: bold; 
                   padding: 2px 8px; 
-                  border-radius: 6px;
-                  text-transform: uppercase;">
-                  ${appLabel}
+                  border-radius: 6px;">
+                  PEPE
                 </span>
               </div>
-              <span class="status-badge ${req.status}">${req.status}</span>
+              <span class="status-badge ${currentStatus.toLowerCase()}">${currentStatus}</span>
             </div>
             
-            <div class="amount-display">${Number(req.amount).toLocaleString()} Tokens</div>
+            <div class="amount-display">${Number(req.amount).toLocaleString()} PEPE</div>
             
-            ${req.status === 'pending' ? `
+            ${currentStatus.toLowerCase() === 'pending' ? `
               <div class="admin-actions">
-                <button class="action-btn approve-btn" onclick="updateStatus(${req.id}, 'approved')">✓ Approve</button>
-                <button class="action-btn reject-btn" onclick="updateStatus(${req.id}, 'rejected')">✕ Reject</button>
+                <button class="action-btn approve-btn" onclick="updateStatus(${req.id}, 'Approved')">✓ Approve</button>
+                <button class="action-btn reject-btn" onclick="updateStatus(${req.id}, 'Rejected')">✕ Reject</button>
               </div>
             ` : ''}
           </div>
@@ -528,7 +529,9 @@
         });
         const data = await res.json();
         if (data.success) {
-          fetchAdminRequests(); // Refresh requests list
+          fetchAdminRequests();
+        } else {
+          alert('Failed: ' + data.message);
         }
       } catch (err) {
         alert('Failed to update status');
