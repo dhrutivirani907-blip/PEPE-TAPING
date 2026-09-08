@@ -1,697 +1,542 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    
-    <!-- AUTOMATIC CACHE DISABLE FOR MOBILE APPS -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PEPE Tapping Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
 
-    <title>PEPE Tap & Earn</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        :root {
-            --bg-color: #060b07;
-            --card-bg: #102215;
-            --pepe-green: #00ff66;
-            --pepe-dark-green: #0a471f;
-            --green-gradient: linear-gradient(135deg, #00ff66 0%, #00b347 100%);
-            --text-color: #ffffff;
-            --text-muted: #a3c2ac;
-            --border-color: #1a3d24;
-            --red: #dc3545;
-            --blue: #0088cc;
-        }
+    body {
+      background-color: #0d0e12;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+    .app-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-grow: 1;
+    }
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+    /* Header & Balance */
+    .header {
+      margin-top: 10px;
+      text-align: center;
+    }
 
-        .container {
-            flex: 1;
-            padding: 20px;
-            margin-bottom: 70px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #8E8E93;
+      letter-spacing: 1px;
+    }
 
-        .balance-header {
-            text-align: center;
-            margin-top: 10px;
-        }
+    .balance-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
 
-        .balance-title {
-            font-size: 14px;
-            color: var(--text-muted);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
+    .coin-icon {
+      width: 40px;
+      height: 40px;
+    }
 
-        .balance-amount {
-            font-size: 40px;
-            font-weight: 800;
-            color: var(--pepe-green);
-            margin: 5px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            text-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
-        }
+    .balance {
+      font-size: 36px;
+      font-weight: 800;
+    }
 
-        .tap-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            margin: 20px 0;
-        }
+    .level-badge {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #34C759;
+      margin-top: 6px;
+    }
 
-        .coin-btn {
-            width: 220px;
-            height: 220px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #10331a 0%, #05140a 100%);
-            border: 4px solid var(--pepe-green);
-            box-shadow: 0 0 35px rgba(0, 255, 102, 0.25);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.05s ease;
-        }
+    /* Tap Area */
+    .tap-area {
+      position: relative;
+      margin: 40px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-        .coin-btn:active {
-            transform: scale(0.94);
-        }
+    .tap-button {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #2c2c2e 0%, #1c1c1e 100%);
+      border: 4px solid #34C759;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 30px rgba(52, 199, 89, 0.3);
+      cursor: pointer;
+      transition: transform 0.05s ease;
+    }
 
-        .coin-img {
-            width: 165px;
-            height: 165px;
-            border-radius: 50%;
-            object-fit: cover;
-            pointer-events: none;
-        }
+    .tap-button:active {
+      transform: scale(0.95);
+    }
 
-        .energy-box {
-            width: 100%;
-            max-width: 320px;
-            text-align: center;
-            margin-bottom: 15px;
-        }
+    .tap-button img {
+      width: 140px;
+      height: 140px;
+      pointer-events: none;
+    }
 
-        .energy-text {
-            font-size: 16px;
-            font-weight: bold;
-            color: var(--pepe-green);
-            margin-bottom: 8px;
-        }
+    /* Floating +1 Text Animation */
+    .floating-text {
+      position: absolute;
+      font-size: 28px;
+      font-weight: bold;
+      color: #34C759;
+      pointer-events: none;
+      animation: floatUp 0.8s ease-out forwards;
+    }
 
-        .progress-bar {
-            width: 100%;
-            height: 12px;
-            background: #0d1a10;
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-80px); }
+    }
 
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: var(--green-gradient);
-            transition: width 0.2s ease;
-            box-shadow: 0 0 8px rgba(0, 255, 102, 0.5);
-        }
+    /* Progress & Energy */
+    .progress-container {
+      width: 100%;
+      margin-bottom: 20px;
+    }
 
-        .btn {
-            width: 100%;
-            max-width: 320px;
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            background: var(--green-gradient);
-            color: #021206;
-            box-shadow: 0 4px 15px rgba(0, 255, 102, 0.2);
-            margin-top: 10px;
-            transition: all 0.2s ease;
-        }
+    .energy-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #8E8E93;
+      margin-bottom: 6px;
+    }
 
-        .btn:disabled {
-            background: #122116 !important;
-            color: #435e4a !important;
-            box-shadow: none;
-            cursor: not-allowed;
-            border: 1px solid #1a2f20;
-        }
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      background: #1c1c1e;
+      border-radius: 5px;
+      overflow: hidden;
+    }
 
-        .btn-sm {
-            padding: 8px 14px;
-            font-size: 13px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            color: #000;
-        }
+    .progress-fill {
+      height: 100%;
+      background: #34C759;
+      width: 100%;
+      transition: width 0.1s ease;
+    }
 
-        .btn-start { background: var(--pepe-green); }
-        .btn-approve { background: var(--pepe-green); }
-        .btn-done { background: #1a2d1f; color: #52755a; cursor: not-allowed; }
+    /* Action Buttons */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+    }
 
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 20px;
-            width: 100%;
-            max-width: 360px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
-        }
+    .btn {
+      background: #1c1c1e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
 
-        .input-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
+    .btn:active { background: #2c2c2e; }
 
-        .input-group label {
-            font-size: 12px;
-            color: var(--text-muted);
-            display: block;
-            margin-bottom: 6px;
-        }
+    /* Modal Styling */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
 
-        input {
-            width: 100%;
-            padding: 14px;
-            background: #07120a;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            color: #fff;
-            font-size: 14px;
-            outline: none;
-        }
+    .modal-content {
+      background: #1c1c1e;
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 380px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-        input:focus {
-            border-color: var(--pepe-green);
-        }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
 
-        .navbar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #050a06;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-around;
-            padding: 12px 0;
-            z-index: 999;
-        }
+    .close-btn {
+      font-size: 24px;
+      color: #8E8E93;
+      cursor: pointer;
+    }
 
-        .nav-item {
-            color: var(--text-muted);
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            flex: 1;
-            text-align: center;
-        }
+    .input-group {
+      margin-bottom: 16px;
+    }
 
-        .nav-item.active {
-            color: var(--pepe-green);
-        }
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: #8E8E93;
+      margin-bottom: 6px;
+    }
 
-        .screen { display: none; width: 100%; }
-        .screen.active { display: flex; flex-direction: column; align-items: center; }
+    .input-group input {
+      width: 100%;
+      padding: 12px;
+      background: #2c2c2e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: white;
+      font-size: 14px;
+      outline: none;
+    }
 
-        .admin-table {
-            width: 100%;
-            max-width: 500px;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 13px;
-        }
+    .submit-btn {
+      width: 100%;
+      background: #34C759;
+      color: black;
+      font-weight: bold;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
 
-        .admin-table th, .admin-table td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
+    /* Admin View Specifics */
+    #admin-view {
+      display: none;
+      width: 100%;
+      max-width: 500px;
+      padding: 20px;
+    }
 
-        .admin-table th {
-            color: var(--pepe-green);
-            background: #08140b;
-        }
+    .admin-card {
+      background: #1c1c1e;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
 
-        .task-list {
-            width: 100%;
-            max-width: 360px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 15px;
-        }
+    .admin-card-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
 
-        .task-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    .user-id { font-weight: bold; color: #fff; }
+    .amount-display { font-size: 18px; font-weight: bold; color: #34C759; margin: 8px 0; }
+    .status-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+    .status-badge.pending { background: rgba(255, 149, 0, 0.2); color: #ff9500; }
+    .status-badge.approved { background: rgba(52, 199, 89, 0.2); color: #34C759; }
+    .status-badge.rejected { background: rgba(255, 59, 48, 0.2); color: #ff3b30; }
 
-        .task-info h4 {
-            margin: 0 0 5px 0;
-            font-size: 15px;
-            color: #fff;
-        }
+    .admin-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
 
-        .task-info p {
-            margin: 0;
-            font-size: 13px;
-            color: var(--pepe-green);
-            font-weight: bold;
-        }
-    </style>
+    .action-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .approve-btn { background: #34C759; color: #000; }
+    .reject-btn { background: #ff3b30; color: #fff; }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        
-        <!-- HOME SCREEN -->
-        <div id="home-screen" class="screen active">
-            <div class="balance-header">
-                <div class="balance-title">PEPE BALANCE</div>
-                <div class="balance-amount">
-                    🐸 <span id="balance-val">0</span>
-                </div>
-            </div>
-
-            <div class="tap-area">
-                <div class="coin-btn" id="coin-btn" onclick="handleTap()">
-                    <img src="photo_2026-09-08_18-06-46.jpg" alt="PEPE" class="coin-img" onerror="this.src='https://cryptologos.cc/logos/pepe-pepe-logo.png'">
-                </div>
-            </div>
-
-            <div class="energy-box">
-                <div class="energy-text">⚡ <span id="xp-val">0</span> / 2000</div>
-                <div class="progress-bar">
-                    <div id="xp-fill" class="progress-fill"></div>
-                </div>
-            </div>
-
-            <button id="ad-btn" class="btn" onclick="watchAdForEnergy()" disabled>
-                Watch Ads (+200 XP)
-            </button>
-        </div>
-
-        <!-- TASKS SCREEN -->
-        <div id="tasks-screen" class="screen">
-            <div class="balance-header" style="margin-bottom: 20px;">
-                <div class="balance-title">EARN EXTRA PEPE</div>
-                <div class="balance-amount" style="font-size: 28px;">Complete Tasks</div>
-            </div>
-
-            <div class="task-list">
-                <div class="task-card">
-                    <div class="task-info">
-                        <h4>Join QuickDogs Bot</h4>
-                        <p>+200 PEPE</p>
-                    </div>
-                    <button id="task-btn-quickdogs" class="btn-sm btn-start" onclick="handleTaskAction('quickdogs', 200, TASK_1_LINK)">Join</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- WITHDRAW SCREEN -->
-        <div id="withdraw-screen" class="screen">
-            <div class="balance-header" style="margin-bottom: 20px;">
-                <div class="balance-title">WITHDRAW BALANCE</div>
-                <div class="balance-amount">
-                    <span id="withdraw-balance-val">0</span> PEPE
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="input-group">
-                    <label>Binance Pay ID / User ID</label>
-                    <input type="text" id="binance-id" placeholder="Enter your Binance ID">
-                </div>
-
-                <div class="input-group">
-                    <label>Amount (Min: 1,000 PEPE)</label>
-                    <input type="number" id="withdraw-amount" placeholder="Min 1000">
-                </div>
-
-                <button id="withdraw-btn" class="btn" onclick="submitWithdrawal()">Withdraw Now</button>
-            </div>
-        </div>
-
-        <!-- ADMIN PANEL SCREEN -->
-        <div id="admin-screen" class="screen">
-            <div class="balance-header">
-                <div class="balance-title">PEPE ADMIN DASHBOARD</div>
-                <div class="balance-amount" style="font-size: 24px;">Withdrawal Requests</div>
-            </div>
-
-            <button class="btn" style="width: auto; padding: 8px 16px; margin-bottom: 15px;" onclick="fetchWithdrawals()">🔄 Refresh PEPE Requests</button>
-
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Binance ID</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="withdrawal-list">
-                    <tr><td colspan="4" style="text-align:center;">Loading PEPE requests...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
+  <!-- App Main Screen -->
+  <div id="user-view" class="app-container">
+    <div class="header">
+      <div class="title">PEPE TAPPING</div>
+      <div class="balance-container">
+        <span class="balance" id="balance-display">0</span>
+      </div>
+      <div class="level-badge" id="level-display">Bronze Level</div>
     </div>
 
-    <!-- NAVBAR -->
-    <div class="navbar" id="main-navbar">
-        <div class="nav-item active" id="nav-home" onclick="switchScreen('home-screen', 'nav-home')">HOME</div>
-        <div class="nav-item" id="nav-tasks" onclick="switchScreen('tasks-screen', 'nav-tasks')">TASKS</div>
-        <div class="nav-item" id="nav-withdraw" onclick="switchScreen('withdraw-screen', 'nav-withdraw')">WITHDRAW</div>
-        <div class="nav-item" id="nav-admin" style="display:none;" onclick="switchScreen('admin-screen', 'nav-admin')">ADMIN</div>
+    <div class="tap-area">
+      <div class="tap-button" id="tap-btn">
+        <img src="https://cryptologos.cc/logos/pepe-pepe-logo.png" alt="PEPE">
+      </div>
     </div>
 
-    <script>
-        const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
-        const TASK_1_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
-        const BACKEND_URL = "https://pepe-backend-wkym.onrender.com"; 
-        const APP_NAME = "PEPE";
-        const MAX_XP = 2000;
-        
-        let balance = parseInt(localStorage.getItem('pepe_balance'));
-        if (isNaN(balance) || balance < 0) balance = 0;
+    <div class="progress-container">
+      <div class="energy-text">
+        <span>⚡ Energy</span>
+        <span id="energy-display">1000 / 1000</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="energy-bar"></div>
+      </div>
+    </div>
 
-        let xp = parseInt(localStorage.getItem('pepe_xp'));
-        if (isNaN(xp) || xp < 0) xp = 0;
-        if (xp > MAX_XP) xp = MAX_XP;
+    <div class="actions-grid">
+      <button class="btn" onclick="openModal('withdraw-modal')">💸 Withdraw</button>
+      <button class="btn" onclick="alert('Earn feature coming soon!')">🎯 Earn</button>
+    </div>
+  </div>
 
-        let isWaitingForAd = false;
-        let adStartTime = 0;
-        let isWithdrawSubmitting = false;
+  <!-- Admin Screen -->
+  <div id="admin-view">
+    <h2 style="margin-bottom: 20px; text-align: center;">PEPE Admin Requests</h2>
+    <div id="admin-requests-list">Loading...</div>
+  </div>
 
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.ready();
-            window.Telegram.WebApp.expand();
-        }
+  <!-- Withdrawal Modal -->
+  <div class="modal" id="withdraw-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Withdraw PEPE</h3>
+        <span class="close-btn" onclick="closeModal('withdraw-modal')">&times;</span>
+      </div>
+      <div class="input-group">
+        <label>Binance Pay ID</label>
+        <input type="text" id="binance-id-input" placeholder="e.g. 123456789">
+      </div>
+      <div class="input-group">
+        <label>Amount (Tokens)</label>
+        <input type="number" id="withdraw-amount-input" placeholder="Min 10,000">
+      </div>
+      <button class="submit-btn" onclick="submitWithdrawal()">Submit Request</button>
+    </div>
+  </div>
 
-        function updateUI() {
-            document.getElementById('balance-val').innerText = balance.toLocaleString();
-            document.getElementById('withdraw-balance-val').innerText = balance.toLocaleString();
-            document.getElementById('xp-val').innerText = xp;
-            
-            let fillPercentage = Math.max(0, Math.min(100, (xp / MAX_XP) * 100));
-            document.getElementById('xp-fill').style.width = fillPercentage + '%';
+  <script>
+    // CONFIGURATION
+    const APP_NAME = "PEPE"; // Change to "BONK" for BONK App
+    const BACKEND_URL = "https://pepe-backend-gl12.onrender.com"; // Apne Backend Ka URL Yaha Likhein
 
-            const adBtn = document.getElementById('ad-btn');
-            if (xp <= 1800) {
-                adBtn.disabled = false;
-            } else {
-                adBtn.disabled = true;
-            }
+    // LOCAL STORAGE KEYS (Unique to avoid clash)
+    const STORAGE_KEY_BALANCE = `${APP_NAME.toLowerCase()}_balance`;
+    const STORAGE_KEY_ENERGY = `${APP_NAME.toLowerCase()}_energy`;
 
-            updateTaskButtons();
-        }
+    // STATE VARIABLES
+    let balance = parseInt(localStorage.getItem(STORAGE_KEY_BALANCE)) || 0;
+    let energy = parseInt(localStorage.getItem(STORAGE_KEY_ENERGY)) || 1000;
+    const maxEnergy = 1000;
 
-        function handleTap() {
-            if (xp >= 10) {
-                balance += 1;
-                xp -= 10;
-                
-                localStorage.setItem('pepe_balance', balance);
-                localStorage.setItem('pepe_xp', xp);
-                
-                updateUI();
-            } else {
-                alert("Out of Energy! Watch Ads to gain 200 XP.");
-            }
-        }
+    // DOM ELEMENTS
+    const balanceDisplay = document.getElementById('balance-display');
+    const energyDisplay = document.getElementById('energy-display');
+    const energyBar = document.getElementById('energy-bar');
+    const tapBtn = document.getElementById('tap-btn');
 
-        function checkAndProcessAdReward() {
-            if (!isWaitingForAd) return;
+    // INITIAL RENDER
+    updateUI();
 
-            const timeSpent = (Date.now() - adStartTime) / 1000;
-            isWaitingForAd = false;
+    // TAPPING LOGIC
+    tapBtn.addEventListener('click', (e) => {
+      if (energy <= 0) return;
 
-            if (timeSpent >= 3) {
-                xp = Math.min(MAX_XP, xp + 200);
-                localStorage.setItem('pepe_xp', xp);
-                updateUI();
+      balance += 1;
+      energy -= 1;
 
-                fetch(`${BACKEND_URL}/api/recharge-energy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ energyAmount: 200, appName: APP_NAME })
-                }).catch(err => console.log('Backend sync skipped'));
+      saveState();
+      updateUI();
+      createFloatingText(e);
+    });
 
-                alert("⚡ +200 XP Energy Added!");
-            } else {
-                alert("⚠️ Please view the ad for at least 3 seconds to claim energy!");
-            }
-        }
+    // ENERGY REGENERATION (1 energy per second)
+    setInterval(() => {
+      if (energy < maxEnergy) {
+        energy += 1;
+        saveState();
+        updateUI();
+      }
+    }, 1000);
 
-        function watchAdForEnergy() {
-            if (xp > 1800) return;
+    function updateUI() {
+      balanceDisplay.innerText = balance.toLocaleString();
+      energyDisplay.innerText = `${energy} / ${maxEnergy}`;
+      energyBar.style.width = `${(energy / maxEnergy) * 100}%`;
+    }
 
-            isWaitingForAd = true;
-            adStartTime = Date.now();
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY_BALANCE, balance);
+      localStorage.setItem(STORAGE_KEY_ENERGY, energy);
+    }
 
-            openExternalLink(ADSTERRA_LINK);
-        }
+    function createFloatingText(e) {
+      const rect = tapBtn.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
-        function handleTaskAction(taskId, reward, linkUrl) {
-            const status = localStorage.getItem(`pepe_task_${taskId}`);
+      const floatText = document.createElement('div');
+      floatText.className = 'floating-text';
+      floatText.innerText = '+1';
+      floatText.style.left = `${x}px`;
+      floatText.style.top = `${y}px`;
 
-            if (status === 'claimed') return;
+      tapBtn.appendChild(floatText);
 
-            if (status === 'visited') {
-                balance += reward;
-                localStorage.setItem('pepe_balance', balance);
-                localStorage.setItem(`pepe_task_${taskId}`, 'claimed');
-                updateUI();
-                alert(`✅ Task Completed! You earned ${reward} PEPE.`);
-            } else {
-                localStorage.setItem(`pepe_task_${taskId}`, 'visited');
-                updateTaskButtons();
-                openExternalLink(linkUrl);
-            }
-        }
+      setTimeout(() => floatText.remove(), 800);
+    }
 
-        function updateTaskButtons() {
-            ['quickdogs'].forEach(taskId => {
-                const btn = document.getElementById(`task-btn-${taskId}`);
-                if (!btn) return;
+    // MODAL CONTROL
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-                const status = localStorage.getItem(`pepe_task_${taskId}`);
+    // SUBMIT WITHDRAWAL TO BACKEND
+    async function submitWithdrawal() {
+      const binanceId = document.getElementById('binance-id-input').value.trim();
+      const amount = parseInt(document.getElementById('withdraw-amount-input').value);
 
-                if (status === 'claimed') {
-                    btn.innerText = 'Claimed ✅';
-                    btn.className = 'btn-sm btn-done';
-                    btn.disabled = true;
-                } else if (status === 'visited') {
-                    btn.innerText = 'Claim';
-                    btn.className = 'btn-sm btn-approve';
-                    btn.disabled = false;
-                } else {
-                    btn.innerText = 'Join';
-                    btn.className = 'btn-sm btn-start';
-                    btn.disabled = false;
-                }
-            });
-        }
+      if (!binanceId) return alert('Please enter Binance Pay ID');
+      if (!amount || amount < 10000) return alert('Minimum withdrawal is 10,000 tokens');
+      if (amount > balance) return alert('Insufficient balance!');
 
-        function openExternalLink(url) {
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-                window.Telegram.WebApp.openLink(url);
-            } else {
-                window.open(url, '_blank');
-            }
-        }
-
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.onEvent('activated', () => checkAndProcessAdReward());
-        }
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') checkAndProcessAdReward();
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/withdraw`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ binanceId, amount, appName: APP_NAME })
         });
 
-        window.addEventListener('focus', () => checkAndProcessAdReward());
+        const data = await response.json();
 
-        function switchScreen(screenId, navId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if (data.success) {
+          balance -= amount;
+          saveState();
+          updateUI();
+          closeModal('withdraw-modal');
+          alert('Withdrawal request submitted successfully!');
+          document.getElementById('binance-id-input').value = '';
+          document.getElementById('withdraw-amount-input').value = '';
+        } else {
+          alert('Error: ' + data.message);
+        }
+      } catch (error) {
+        console.error("Submit error:", error);
+        alert('Server Connection Error');
+      }
+    }
 
-            document.getElementById(screenId).classList.add('active');
-            if (document.getElementById(navId)) {
-                document.getElementById(navId).classList.add('active');
-            }
+    // ------------------- ADMIN PANEL LOGIC -------------------
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('admin') === 'true') {
+      document.getElementById('user-view').style.display = 'none';
+      document.getElementById('admin-view').style.display = 'block';
+      fetchAdminRequests();
+    }
+
+    async function fetchAdminRequests() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/withdrawals?app=${APP_NAME}`);
+        const requests = await res.json();
+        renderAdminRequests(requests);
+      } catch (err) {
+        document.getElementById('admin-requests-list').innerText = 'Failed to load requests.';
+      }
+    }
+
+    function renderAdminRequests(requests) {
+      const container = document.getElementById('admin-requests-list');
+      
+      if (!requests || requests.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding: 20px; color: #8E8E93;">No pending requests</div>';
+        return;
+      }
+
+      container.innerHTML = requests.map(req => {
+        const appTagColor = (req.appName || '').toUpperCase() === 'BONK' ? '#ff9500' : '#007aff';
+        const appLabel = req.appName ? req.appName.toUpperCase() : 'PEPE';
+
+        return `
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="user-id">ID: ${req.binanceId}</span>
+                <span style="
+                  background-color: ${appTagColor}; 
+                  color: white; 
+                  font-size: 11px; 
+                  font-weight: bold; 
+                  padding: 2px 8px; 
+                  border-radius: 6px;
+                  text-transform: uppercase;">
+                  ${appLabel}
+                </span>
+              </div>
+              <span class="status-badge ${req.status}">${req.status}</span>
+            </div>
             
-            if (screenId === 'admin-screen') {
-                fetchWithdrawals();
-            } else {
-                updateUI();
-            }
-        }
+            <div class="amount-display">${Number(req.amount).toLocaleString()} Tokens</div>
+            
+            ${req.status === 'pending' ? `
+              <div class="admin-actions">
+                <button class="action-btn approve-btn" onclick="updateStatus(${req.id}, 'approved')">✓ Approve</button>
+                <button class="action-btn reject-btn" onclick="updateStatus(${req.id}, 'rejected')">✕ Reject</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
 
-        function submitWithdrawal() {
-            if (isWithdrawSubmitting) return;
-
-            const btn = document.getElementById('withdraw-btn');
-            const binanceIdInput = document.getElementById('binance-id');
-            const amountInput = document.getElementById('withdraw-amount');
-
-            const binanceId = binanceIdInput.value.trim();
-            const amount = parseInt(amountInput.value);
-
-            if (!binanceId) {
-                alert("Please enter your Binance ID!");
-                return;
-            }
-            if (isNaN(amount) || amount < 1000) {
-                alert("Minimum withdrawal is 1,000 PEPE!");
-                return;
-            }
-            if (balance <= 0 || amount > balance) {
-                alert("❌ Insufficient PEPE balance!");
-                return;
-            }
-
-            isWithdrawSubmitting = true;
-            btn.disabled = true;
-            btn.innerText = "Processing...";
-
-            balance -= amount;
-            localStorage.setItem('pepe_balance', balance);
-            updateUI();
-
-            fetch(`${BACKEND_URL}/api/withdraw`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ binanceId, amount, appName: APP_NAME })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) {
-                    balance += amount;
-                    localStorage.setItem('pepe_balance', balance);
-                    updateUI();
-                    alert("❌ " + data.message);
-                    return;
-                }
-                
-                alert("✅ PEPE Withdrawal Request Submitted!");
-                binanceIdInput.value = '';
-                amountInput.value = '';
-            })
-            .catch(err => {
-                balance += amount;
-                localStorage.setItem('pepe_balance', balance);
-                updateUI();
-                alert("❌ Network Error. Please try again.");
-            })
-            .finally(() => {
-                isWithdrawSubmitting = false;
-                btn.disabled = false;
-                btn.innerText = "Withdraw Now";
-            });
-        }
-
-        function fetchWithdrawals() {
-            const listElement = document.getElementById('withdrawal-list');
-            listElement.innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading PEPE requests...</td></tr>`;
-
-            fetch(`${BACKEND_URL}/api/withdrawals?app=${APP_NAME}`)
-            .then(res => {
-                if (!res.ok) throw new Error("HTTP error " + res.status);
-                return res.json();
-            })
-            .then(data => {
-                if (!data || data.length === 0) {
-                    listElement.innerHTML = `<tr><td colspan="4" style="text-align:center;">No pending PEPE requests found.</td></tr>`;
-                    return;
-                }
-
-                let rowsHtml = '';
-                data.forEach(item => {
-                    rowsHtml += `
-                        <tr>
-                            <td>${item.binanceId}</td>
-                            <td>${item.amount} PEPE</td>
-                            <td>${item.status || 'Pending'}</td>
-                            <td>
-                                <button class="btn-sm btn-approve" onclick="updateStatus('${item.id}', 'Approved')">✓</button>
-                                <button class="btn-sm btn-reject" style="background:var(--red); color:#fff;" onclick="updateStatus('${item.id}', 'Rejected')">✗</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-                listElement.innerHTML = rowsHtml;
-            })
-            .catch(err => {
-                console.error(err);
-                listElement.innerHTML = `<tr><td colspan="4" style="text-align:center; color: red;">Failed to load data from backend.</td></tr>`;
-            });
-        }
-
-        function updateStatus(id, newStatus) {
-            fetch(`${BACKEND_URL}/api/withdrawals/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
-            })
-            .then(res => res.json())
-            .then(() => {
-                alert(`Status updated to ${newStatus}`);
-                fetchWithdrawals();
-            })
-            .catch(() => alert("Failed to update status"));
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const isAdmin = urlParams.get('admin') === 'true' || window.location.hash === '#admin';
-
-            if (isAdmin) {
-                document.getElementById('nav-admin').style.display = 'block';
-                switchScreen('admin-screen', 'nav-admin');
-            } else {
-                updateUI();
-            }
+    async function updateStatus(id, newStatus) {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/withdrawals/update-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: newStatus })
         });
-    </script>
+        const data = await res.json();
+        if (data.success) {
+          fetchAdminRequests(); // Refresh requests list
+        }
+      } catch (err) {
+        alert('Failed to update status');
+      }
+    }
+  </script>
 </body>
 </html>
