@@ -14,24 +14,32 @@ app.use(express.json());
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Required for Render & Cloud PostgreSQL DBs
+    rejectUnauthorized: false
   }
 });
 
-// Database Table Initialization
+// Database Table Initialization & Auto-Migration
 const initDb = async () => {
   try {
+    // Table creation with app_name column
     const queryText = `
       CREATE TABLE IF NOT EXISTS withdrawals (
         id SERIAL PRIMARY KEY,
         binance_id VARCHAR(100) NOT NULL,
         amount INT NOT NULL,
         status VARCHAR(20) DEFAULT 'Pending',
+        app_name VARCHAR(50) DEFAULT 'PEPE',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `;
     await pool.query(queryText);
-    console.log(" PostgreSQL DB & Table Ready!");
+
+    // Migration: Add app_name column if table already exists without it
+    await pool.query(`
+      ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS app_name VARCHAR(50) DEFAULT 'PEPE';
+    `);
+
+    console.log(" PostgreSQL DB & Table Ready with App Filtering!");
   } catch (err) {
     console.error(" DB Initialization Error:", err);
   }
@@ -46,10 +54,11 @@ app.get('/', (req, res) => {
   res.send({ status: 'active', message: 'Pepe Tapping Backend Server Running' });
 });
 
-// 2. Submit Withdrawal Request API
+// 2. Submit Withdrawal Request API (App Specific)
 app.post('/api/withdraw', async (req, res) => {
   try {
-    const { binanceId, amount } = req.body;
+    const { binanceId, amount, appName } = req.body;
+    const currentApp = appName || 'PEPE';
 
     if (!binanceId || !amount) {
       return res.status(400).json({ success: false, message: "Missing Binance ID or Amount" });
@@ -60,11 +69,11 @@ app.post('/api/withdraw', async (req, res) => {
     }
 
     const query = `
-      INSERT INTO withdrawals (binance_id, amount, status)
-      VALUES ($1, $2, 'Pending')
+      INSERT INTO withdrawals (binance_id, amount, status, app_name)
+      VALUES ($1, $2, 'Pending', $3)
       RETURNING *;
     `;
-    const result = await pool.query(query, [binanceId, amount]);
+    const result = await pool.query(query, [binanceId, amount, currentApp]);
 
     res.json({
       success: true,
@@ -77,11 +86,17 @@ app.post('/api/withdraw', async (req, res) => {
   }
 });
 
-// 3. Get All Withdrawal Requests (For Admin Panel)
+// 3. Get Withdrawal Requests Filtered by App (For Admin Panel)
 app.get('/api/withdrawals', async (req, res) => {
   try {
-    const query = `SELECT id, binance_id AS "binanceId", amount, status, created_at FROM withdrawals ORDER BY created_at DESC;`;
-    const result = await pool.query(query);
+    const appName = req.query.app || 'PEPE';
+    const query = `
+      SELECT id, binance_id AS "binanceId", amount, status, app_name AS "appName", created_at 
+      FROM withdrawals 
+      WHERE app_name = $1 
+      ORDER BY created_at DESC;
+    `;
+    const result = await pool.query(query, [appName]);
     res.json(result.rows);
   } catch (error) {
     console.error("Error in GET /api/withdrawals:", error);
