@@ -1,177 +1,123 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 
 const app = express();
-
-// ------------------- CORS FIX CONFIGURATION -------------------
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
+app.use(cors());
 app.use(express.json());
 
-// ------------------- DATABASE CONNECTION -------------------
+// PostgreSQL Connection Setup (Neon / Render)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false // Render & Neon PostgreSQL ke liye
-  }
+  ssl: { rejectUnauthorized: false }
 });
 
-// Database Initialization & Automatic Migration
-const initDb = async () => {
+// Database Initialization & Auto Migration
+const initDB = async () => {
   try {
-    // 1. Withdrawals Table Create Karein (Complete Schema ke saath)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS withdrawals (
-        id VARCHAR(100) PRIMARY KEY,
-        user_id VARCHAR(100),
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
         binance_id VARCHAR(255),
         wallet VARCHAR(255),
-        amount NUMERIC,
-        type VARCHAR(50),
-        total_deduct VARCHAR(100),
-        status VARCHAR(50) DEFAULT 'Pending',
+        amount NUMERIC NOT NULL,
+        type VARCHAR(50) DEFAULT 'PEPE',
         app VARCHAR(50) DEFAULT 'PEPE',
+        status VARCHAR(50) DEFAULT 'Pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-
-    // 2. Safe Migration (Agar purani table me naye columns na ho)
-    await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS user_id VARCHAR(100);`);
-    await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS wallet VARCHAR(255);`);
-    await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS type VARCHAR(50);`);
-    await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS app VARCHAR(50) DEFAULT 'PEPE';`);
-
-    console.log("Database schema initialized and synced successfully!");
+    console.log("Database initialized successfully.");
   } catch (err) {
-    console.error("Database initialization failed:", err);
+    console.error("Database Migration Error:", err);
   }
 };
+initDB();
 
-initDb();
-
-// ------------------- API ROUTES -------------------
-
-// 1. Create Withdrawal Request
+// 1. Submit Withdrawal Request Endpoint
 app.post('/api/withdraw', async (req, res) => {
   try {
-    const { id, userId, binanceId, wallet, amount, type, totalDeduct, appName } = req.body;
+    const { userId, binanceId, wallet, amount, type, appName } = req.body;
 
-    const reqId = id || Date.now().toString();
-    const reqUserId = userId || 'N/A';
-    const reqWallet = wallet || binanceId || 'N/A';
-    const reqAmount = amount || 0;
-    const reqType = type || 'Binance';
-    const reqDeduct = totalDeduct || reqAmount.toString();
-    const app = (appName || req.body.app || 'PEPE').trim().toUpperCase();
-
-    const insertQuery = `
-      INSERT INTO withdrawals (id, user_id, binance_id, wallet, amount, type, total_deduct, status, app, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending', $8, NOW())
-      RETURNING id, user_id AS "userId", binance_id AS "binanceId", wallet, amount, type, 
-                total_deduct AS "totalDeduct", status, app, created_at;
-    `;
-
-    const result = await pool.query(insertQuery, [
-      reqId, reqUserId, binanceId || reqWallet, reqWallet, reqAmount, reqType, reqDeduct, app
-    ]);
-
-    res.json({ success: true, request: result.rows[0] });
-
-  } catch (error) {
-    console.error("Error creating withdrawal:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-});
-
-// 2. Get Withdrawal Requests Filtered by App
-app.get('/api/withdrawals', async (req, res) => {
-  try {
-    const appQuery = req.query.app ? req.query.app.trim().toUpperCase() : null;
-
-    let query = `
-      SELECT 
-        id, 
-        user_id AS "userId", 
-        binance_id AS "binanceId", 
-        wallet, 
-        amount, 
-        type, 
-        total_deduct AS "totalDeduct", 
-        status, 
-        COALESCE(app, 'PEPE') AS "app", 
-        created_at 
-      FROM withdrawals
-    `;
-    
-    let values = [];
-
-    // Agar URL me ?app=BONK ya ?app=PEPE bheja hai toh filter karein
-    if (appQuery && appQuery !== 'ALL') {
-      query += ` WHERE UPPER(TRIM(COALESCE(app, 'PEPE'))) = $1`;
-      values.push(appQuery);
+    // Strict Validation Check
+    if (!userId || (!binanceId && !wallet) || !amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Request Data. Missing userId, wallet/binanceId, or amount.'
+      });
     }
 
-    query += ` ORDER BY created_at DESC;`;
+    // Dynamic App Tagging Logic (Defaults to PEPE if not provided)
+    const finalApp = (appName || type || 'PEPE').toUpperCase();
+    const targetWallet = wallet || binanceId;
 
+    const query = `
+      INSERT INTO withdrawals (user_id, binance_id, wallet, amount, type, app, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'Pending')
+      RETURNING *;
+    `;
+
+    const values = [userId, targetWallet, targetWallet, amount, finalApp, finalApp];
     const result = await pool.query(query, values);
-    res.json(result.rows);
 
+    return res.status(200).json({
+      success: true,
+      message: 'Withdrawal request created successfully',
+      data: result.rows[0]
+    });
   } catch (error) {
-    console.error("Error fetching withdrawals:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    console.error("Error in /api/withdraw:", error);
+    return res.status(500).json({ success: false, message: 'Server Internal Error' });
   }
 });
 
-// 3. Update Withdrawal Status (Approve / Reject)
+// 2. Fetch Withdrawals Endpoint (For Admin Panel with Filter Support)
+app.get('/api/withdrawals', async (req, res) => {
+  try {
+    const selectedApp = req.query.app ? req.query.app.toUpperCase() : null;
+
+    let query = `SELECT id, user_id, wallet, binance_id, amount, type, COALESCE(app, 'PEPE') AS app, status, created_at FROM withdrawals`;
+    let values = [];
+
+    // Filter Logic: If app query parameter is passed (e.g. ?app=BONK)
+    if (selectedApp && selectedApp !== 'ALL') {
+      if (selectedApp === 'PEPE') {
+        // Includes legacy records where app column is NULL or explicitly PEPE
+        query += ` WHERE COALESCE(app, 'PEPE') = 'PEPE'`;
+      } else {
+        query += ` WHERE UPPER(app) = $1`;
+        values.push(selectedApp);
+      }
+    }
+
+    query += ` ORDER BY id DESC;`;
+
+    const result = await pool.query(query, values);
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching withdrawals:", error);
+    return res.status(500).json({ success: false, message: 'Error retrieving data' });
+  }
+});
+
+// 3. Update Request Status (Approve / Reject)
 app.post('/api/withdrawals/update-status', async (req, res) => {
   try {
     const { id, status } = req.body;
-
     if (!id || !status) {
-      return res.status(400).json({ success: false, message: "Missing id or status" });
+      return res.status(400).json({ success: false, message: 'Missing ID or Status' });
     }
 
-    const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-
-    const updateQuery = `
-      UPDATE withdrawals 
-      SET status = $1 
-      WHERE id = $2 
-      RETURNING id, status;
-    `;
-
-    const result = await pool.query(updateQuery, [formattedStatus, id.toString()]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Request not found" });
-    }
-
-    res.json({ success: true, updated: result.rows[0] });
-
+    await pool.query('UPDATE withdrawals SET status = $1 WHERE id = $2', [status, id]);
+    return res.status(200).json({ success: true, message: 'Status updated successfully' });
   } catch (error) {
-    console.error("Error updating status:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    console.error("Status Update Error:", error);
+    return res.status(500).json({ success: false, message: 'Failed to update status' });
   }
 });
 
-// Server Start
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
