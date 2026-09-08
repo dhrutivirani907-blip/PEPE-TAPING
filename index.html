@@ -55,11 +55,6 @@
       margin-top: 10px;
     }
 
-    .coin-icon {
-      width: 40px;
-      height: 40px;
-    }
-
     .balance {
       font-size: 36px;
       font-weight: 800;
@@ -262,6 +257,7 @@
     .admin-card-header {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       margin-bottom: 8px;
     }
 
@@ -351,9 +347,9 @@
   </div>
 
   <script>
-    // CONFIGURATION
-    const APP_NAME = "PEPE"; // Change to "BONK" for BONK App
-    const BACKEND_URL = "https://pepe-backend-gl12.onrender.com"; // Apne Backend Ka URL Yaha Likhein
+    // CONFIGURATION (NEW RENDER BACKEND URL)
+    const APP_NAME = "PEPE"; // BONK App ke liye "BONK" karein
+    const BACKEND_URL = "https://pepe-backend-wkym.onrender.com";
 
     // LOCAL STORAGE KEYS (Unique to avoid clash)
     const STORAGE_KEY_BALANCE = `${APP_NAME.toLowerCase()}_balance`;
@@ -474,6 +470,7 @@
         const requests = await res.json();
         renderAdminRequests(requests);
       } catch (err) {
+        console.error("Fetch Admin Error:", err);
         document.getElementById('admin-requests-list').innerText = 'Failed to load requests.';
       }
     }
