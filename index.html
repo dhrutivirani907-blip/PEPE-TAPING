@@ -72,7 +72,7 @@
     /* Tap Area */
     .tap-area {
       position: relative;
-      margin: 40px 0;
+      margin: 30px 0;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -102,7 +102,7 @@
       pointer-events: none;
     }
 
-    /* Floating +1 Text Animation */
+    /* Floating Animations */
     .floating-text {
       position: absolute;
       font-size: 28px;
@@ -117,7 +117,7 @@
       100% { opacity: 0; transform: translateY(-80px); }
     }
 
-    /* Progress & Energy */
+    /* Progress & Energy (XP) Line */
     .progress-container {
       width: 100%;
       margin-bottom: 20px;
@@ -133,17 +133,18 @@
 
     .progress-bar {
       width: 100%;
-      height: 10px;
+      height: 12px;
       background: #1c1c1e;
-      border-radius: 5px;
+      border-radius: 6px;
       overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .progress-fill {
       height: 100%;
       background: #34C759;
-      width: 100%;
-      transition: width 0.1s ease;
+      width: 0%;
+      transition: width 0.2s ease;
     }
 
     /* Action Buttons */
@@ -152,6 +153,7 @@
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       width: 100%;
+      margin-bottom: 12px;
     }
 
     .btn {
@@ -170,6 +172,21 @@
     }
 
     .btn:active { background: #2c2c2e; }
+
+    .btn-ads {
+      width: 100%;
+      background: linear-gradient(135deg, #FF9500 0%, #FF5E00 100%);
+      color: #ffffff;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 149, 0, 0.3);
+    }
+
+    .btn-ads:active { opacity: 0.9; }
 
     /* Modal Styling */
     .modal {
@@ -299,16 +316,18 @@
       <div class="level-badge">Bronze Level</div>
     </div>
 
+    <!-- Center Coin Logo Tap Area -->
     <div class="tap-area">
       <div class="tap-button" id="tap-btn">
         <img src="https://cryptologos.cc/logos/pepe-pepe-logo.png" alt="PEPE">
       </div>
     </div>
 
+    <!-- 2000 XP Progress Bar -->
     <div class="progress-container">
       <div class="energy-text">
-        <span>⚡ Energy</span>
-        <span id="energy-display">1000 / 1000</span>
+        <span>⚡ XP Line</span>
+        <span id="energy-display">0 / 2000 XP</span>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" id="energy-bar"></div>
@@ -317,8 +336,11 @@
 
     <div class="actions-grid">
       <button class="btn" onclick="openModal('withdraw-modal')">💸 Withdraw</button>
-      <button class="btn" onclick="alert('Earn feature coming soon!')">🎯 Earn</button>
+      <button class="btn" onclick="alert('Task section coming soon!')">🎯 Task</button>
     </div>
+
+    <!-- Watch Ads Button (+200 XP) -->
+    <button class="btn-ads" onclick="watchAd()">🎬 Watch Ads (+200 XP)</button>
   </div>
 
   <!-- Admin View -->
@@ -349,10 +371,11 @@
   <script>
     const BACKEND_URL = "https://pepe-backend-wkym.onrender.com";
 
-    // LocalStorage Keys
+    // Game LocalStorage Keys
     let balance = parseInt(localStorage.getItem('pepe_balance')) || 0;
-    let energy = parseInt(localStorage.getItem('pepe_energy')) || 1000;
-    const maxEnergy = 1000;
+    let xp = parseInt(localStorage.getItem('pepe_xp'));
+    if (isNaN(xp)) xp = 0; // Starts at 0 XP
+    const maxXP = 2000;
 
     // DOM Elements
     const balanceDisplay = document.getElementById('balance-display');
@@ -362,43 +385,49 @@
 
     updateUI();
 
-    // Tapping Event
+    // 1 Click = Deduct 10 XP, Add 1 PEPE Coin
     tapBtn.addEventListener('click', (e) => {
-      if (energy <= 0) return;
+      if (xp < 10) {
+        alert('Not enough XP! Watch Ads to get +200 XP.');
+        return;
+      }
 
+      xp -= 10;
       balance += 1;
-      energy -= 1;
 
       saveState();
       updateUI();
-      createFloatingText(e);
+      createFloatingText(e, "+1 PEPE");
     });
 
-    // Energy Regenerate (1 per sec)
-    setInterval(() => {
-      if (energy < maxEnergy) {
-        energy += 1;
-        saveState();
-        updateUI();
+    // Watch Ad Function (+200 XP)
+    function watchAd() {
+      if (xp + 200 > maxXP) {
+        xp = maxXP;
+      } else {
+        xp += 200;
       }
-    }, 1000);
+      saveState();
+      updateUI();
+      alert('You watched an ad! +200 XP added to your balance.');
+    }
 
     function updateUI() {
       balanceDisplay.innerText = balance.toLocaleString();
-      energyDisplay.innerText = `${energy} / ${maxEnergy}`;
-      energyBar.style.width = `${(energy / maxEnergy) * 100}%`;
+      energyDisplay.innerText = `${xp} / ${maxXP} XP`;
+      energyBar.style.width = `${(xp / maxXP) * 100}%`;
     }
 
     function saveState() {
       localStorage.setItem('pepe_balance', balance);
-      localStorage.setItem('pepe_energy', energy);
+      localStorage.setItem('pepe_xp', xp);
     }
 
-    function createFloatingText(e) {
+    function createFloatingText(e, text) {
       const rect = tapBtn.getBoundingClientRect();
       const floatText = document.createElement('div');
       floatText.className = 'floating-text';
-      floatText.innerText = '+1';
+      floatText.innerText = text;
       floatText.style.left = `${e.clientX - rect.left}px`;
       floatText.style.top = `${e.clientY - rect.top}px`;
 
@@ -409,7 +438,7 @@
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // ---------------- WITHDRAWAL SUBMISSION ----------------
+    // ---------------- WITHDRAWAL SUBMISSION (ADMIN UNTOUCHED) ----------------
     async function submitWithdrawal() {
       const binanceId = document.getElementById('binance-id-input').value.trim();
       const amount = parseInt(document.getElementById('withdraw-amount-input').value);
@@ -418,7 +447,6 @@
       if (!amount || amount < 10000) return alert('Minimum withdrawal is 10,000 PEPE');
       if (amount > balance) return alert('Insufficient balance!');
 
-      // Get or Generate unique User ID
       let userId = localStorage.getItem('user_id');
       if (!userId) {
         userId = 'USER_' + Math.floor(100000 + Math.random() * 900000);
@@ -458,7 +486,7 @@
       }
     }
 
-    // ---------------- ADMIN PANEL LOGIC ----------------
+    // ---------------- ADMIN PANEL LOGIC (WORKING UNTOUCHED) ----------------
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('admin') === 'true') {
       document.getElementById('user-view').style.display = 'none';
@@ -489,14 +517,12 @@
         const walletDisplay = req.wallet || req.binance_id || req.binanceId || 'N/A';
         const currentStatus = req.status || 'Pending';
 
-        // Dynamic App Name Read from DB (fallback to PEPE if empty)
         const rawApp = req.app || req.type || req.appName || 'PEPE';
         const appLabel = rawApp.toString().toUpperCase().trim();
 
-        // Dynamic Colors for App Badge
-        let badgeColor = '#34C759'; // Green for PEPE
+        let badgeColor = '#34C759'; 
         if (appLabel.includes('BONK')) {
-          badgeColor = '#FF9500';  // Orange for BONK
+          badgeColor = '#FF9500';  
         }
 
         return `
