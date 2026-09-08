@@ -376,8 +376,8 @@
       <button class="btn" onclick="openModal('task-modal')">🎯 Task</button>
     </div>
 
-    <!-- Watch Ads Button (+200 XP) with Timer -->
-    <button class="btn-ads" id="ad-btn" onclick="watchAdWithTimer()">🎬 Watch Ads (+200 XP)</button>
+    <!-- Watch Ads Button (+200 XP) -->
+    <button class="btn-ads" id="ad-btn" onclick="watchAdWithStrictTimer()">🎬 Watch Ads (+200 XP)</button>
   </div>
 
   <!-- Task Modal -->
@@ -430,10 +430,12 @@
     // Game LocalStorage Keys
     let balance = parseInt(localStorage.getItem('pepe_balance')) || 0;
     let xp = parseInt(localStorage.getItem('pepe_xp'));
-    if (isNaN(xp)) xp = 0; // Starts at 0 XP
+    if (isNaN(xp)) xp = 0;
     const maxXP = 2000;
 
-    let isAdVerifying = false;
+    // Strict Ad Verification Variables
+    let adStartTime = 0;
+    let isAdActive = false;
 
     // DOM Elements
     const balanceDisplay = document.getElementById('balance-display');
@@ -460,29 +462,26 @@
       createFloatingText(e, "+1 PEPE");
     });
 
-    // 1. WATCH AD WITH 5-SECOND VERIFICATION TIMER
-    function watchAdWithTimer() {
-      if (isAdVerifying) return;
+    // STRICT AD WATCH LOGIC (7 SECONDS CHECK)
+    function watchAdWithStrictTimer() {
+      if (isAdActive) return;
 
-      // Open Ad link in new tab
-      window.open(ADSTERRA_LINK, '_blank');
+      isAdActive = true;
+      adStartTime = Date.now();
 
-      isAdVerifying = true;
-      let timeLeft = 5;
-      adBtn.innerText = `⏳ Verifying... (${timeLeft}s)`;
+      adBtn.innerText = "⏳ Watching Ad...";
       adBtn.style.opacity = '0.7';
 
-      const timer = setInterval(() => {
-        timeLeft--;
-        if (timeLeft > 0) {
-          adBtn.innerText = `⏳ Verifying... (${timeLeft}s)`;
-        } else {
-          clearInterval(timer);
-          isAdVerifying = false;
-          adBtn.innerText = "🎬 Watch Ads (+200 XP)";
-          adBtn.style.opacity = '1';
+      window.open(ADSTERRA_LINK, '_blank');
+    }
 
-          // Reward XP
+    // Detect when user comes back to the app tab
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && isAdActive) {
+        const timeSpent = (Date.now() - adStartTime) / 1000; // in seconds
+
+        if (timeSpent >= 7) {
+          // Success: Spent 7+ seconds
           if (xp + 200 > maxXP) {
             xp = maxXP;
           } else {
@@ -490,13 +489,21 @@
           }
           saveState();
           updateUI();
-          alert('Ad Verified! +200 XP added.');
+          alert('Ad Verified successfully! +200 XP added.');
+        } else {
+          // Failed: Returned too early
+          alert('Verification Failed! You must watch the ad for at least 7 seconds.');
         }
-      }, 1000);
-    }
 
-    // 2. DOGS REFFER TASK LOGIC
-    let dogsTaskStatus = localStorage.getItem('dogs_task_status') || 'join'; // 'join', 'claim', 'claimed'
+        // Reset Button State
+        isAdActive = false;
+        adBtn.innerText = "🎬 Watch Ads (+200 XP)";
+        adBtn.style.opacity = '1';
+      }
+    });
+
+    // DOGS REFFER TASK LOGIC
+    let dogsTaskStatus = localStorage.getItem('dogs_task_status') || 'join';
 
     function initTaskUI() {
       const taskBtn = document.getElementById('dogs-task-btn');
@@ -559,7 +566,7 @@
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // 3. WITHDRAWAL SUBMISSION (MINIMUM 1,000 PEPE)
+    // WITHDRAWAL SUBMISSION
     async function submitWithdrawal() {
       const binanceId = document.getElementById('binance-id-input').value.trim();
       const amount = parseInt(document.getElementById('withdraw-amount-input').value);
@@ -607,7 +614,7 @@
       }
     }
 
-    // ---------------- ADMIN PANEL LOGIC (WORKING UNTOUCHED) ----------------
+    // ADMIN PANEL LOGIC
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('admin') === 'true') {
       document.getElementById('user-view').style.display = 'none';
