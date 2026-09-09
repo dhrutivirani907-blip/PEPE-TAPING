@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>PEPE Tapping Game & Admin</title>
+  <!-- Telegram WebApp SDK Script -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -34,7 +36,6 @@
       flex-grow: 1;
     }
 
-    /* Header & Balance */
     .header {
       margin-top: 10px;
       text-align: center;
@@ -69,7 +70,6 @@
       margin-top: 6px;
     }
 
-    /* Tap Area */
     .tap-area {
       position: relative;
       margin: 30px 0;
@@ -102,7 +102,6 @@
       pointer-events: none;
     }
 
-    /* Floating Animations */
     .floating-text {
       position: absolute;
       font-size: 28px;
@@ -117,7 +116,6 @@
       100% { opacity: 0; transform: translateY(-80px); }
     }
 
-    /* Progress & Energy (XP) Line */
     .progress-container {
       width: 100%;
       margin-bottom: 20px;
@@ -147,7 +145,6 @@
       transition: width 0.2s ease;
     }
 
-    /* Action Buttons */
     .actions-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -188,7 +185,6 @@
 
     .btn-ads:active { opacity: 0.9; }
 
-    /* Modal Styling */
     .modal {
       display: none;
       position: fixed;
@@ -255,7 +251,6 @@
       cursor: pointer;
     }
 
-    /* Task Item Styles */
     .task-item {
       background: #2c2c2e;
       border-radius: 12px;
@@ -292,7 +287,6 @@
       cursor: default;
     }
 
-    /* Admin View Specifics */
     #admin-view {
       display: none;
       width: 100%;
@@ -343,7 +337,6 @@
 </head>
 <body>
 
-  <!-- User Game View -->
   <div id="user-view" class="app-container">
     <div class="header">
       <div class="title">PEPE TAPPING</div>
@@ -353,14 +346,12 @@
       <div class="level-badge">Bronze Level</div>
     </div>
 
-    <!-- Center Coin Logo Tap Area -->
     <div class="tap-area">
       <div class="tap-button" id="tap-btn">
         <img src="https://cryptologos.cc/logos/pepe-pepe-logo.png" alt="PEPE">
       </div>
     </div>
 
-    <!-- 2000 XP Progress Bar -->
     <div class="progress-container">
       <div class="energy-text">
         <span>⚡ XP Line</span>
@@ -376,11 +367,9 @@
       <button class="btn" onclick="openModal('task-modal')">🎯 Task</button>
     </div>
 
-    <!-- Watch Ads Button (+200 XP) -->
     <button class="btn-ads" id="ad-btn" onclick="watchAdWithStrictTimer()">🎬 Watch Ads (+200 XP)</button>
   </div>
 
-  <!-- Task Modal -->
   <div class="modal" id="task-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -397,13 +386,11 @@
     </div>
   </div>
 
-  <!-- Admin View -->
   <div id="admin-view">
     <h2 style="margin-bottom: 20px; text-align: center;">Withdrawal Requests</h2>
     <div id="admin-requests-list">Loading...</div>
   </div>
 
-  <!-- Withdrawal Modal -->
   <div class="modal" id="withdraw-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -423,11 +410,16 @@
   </div>
 
   <script>
+    // Initialize Telegram WebApp SDK
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+
     const BACKEND_URL = "https://pepe-backend-wkym.onrender.com";
     const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
     const DOGS_TELEGRAM_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
 
-    // Game LocalStorage Keys Validation
     let balance = Number(localStorage.getItem('pepe_balance'));
     if (isNaN(balance) || balance === null) balance = 0;
 
@@ -435,26 +427,20 @@
     if (isNaN(xp) || xp === null) xp = 0;
 
     const maxXP = 2000;
-
-    // Task Variable Setup (Declared before calling initTaskUI)
     let dogsTaskStatus = localStorage.getItem('dogs_task_status') || 'join';
 
-    // Strict Ad System Variables
     let isAdActive = false;
     let adStartTime = 0;
 
-    // DOM Elements
     const balanceDisplay = document.getElementById('balance-display');
     const energyDisplay = document.getElementById('energy-display');
     const energyBar = document.getElementById('energy-bar');
     const tapBtn = document.getElementById('tap-btn');
     const adBtn = document.getElementById('ad-btn');
 
-    // INITIALIZE UI
     updateUI();
     initTaskUI();
 
-    // TAP HANDLER: 1 Click = -10 XP, +1 PEPE
     tapBtn.addEventListener('click', (e) => {
       if (xp < 10) {
         alert('Not enough XP! Watch Ads to get +200 XP.');
@@ -469,7 +455,6 @@
       createFloatingText(e, "+1 PEPE");
     });
 
-    // AD CLICK HANDLER
     function watchAdWithStrictTimer() {
       if (isAdActive) return;
 
@@ -479,30 +464,44 @@
       adBtn.innerText = "⏳ Watching Ad... Stay 7s on Ad";
       adBtn.style.opacity = '0.7';
 
-      window.open(ADSTERRA_LINK, '_blank');
+      // Open link using Telegram WebApp SDK if available, else standard window.open
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+        window.Telegram.WebApp.openLink(ADSTERRA_LINK);
+      } else {
+        window.open(ADSTERRA_LINK, '_blank');
+      }
     }
 
-    // STRICT TAB SWITCH & TIMESTAMP CHECK
+    function handleAdVerification() {
+      if (!isAdActive) return;
+
+      const timeSpent = (Date.now() - adStartTime) / 1000;
+
+      if (timeSpent >= 7) {
+        xp = Math.min(maxXP, xp + 200);
+        saveState();
+        updateUI();
+        alert('Ad Verified! +200 XP added.');
+      } else {
+        alert(`Verification Failed! You came back in ${Math.floor(timeSpent)}s. Please watch for at least 7 seconds.`);
+      }
+
+      isAdActive = false;
+      adBtn.innerText = "🎬 Watch Ads (+200 XP)";
+      adBtn.style.opacity = '1';
+    }
+
+    // Double Listener for Desktop & Mobile WebApp focus
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && isAdActive) {
-        const timeSpent = (Date.now() - adStartTime) / 1000;
-
-        if (timeSpent >= 7) {
-          xp = Math.min(maxXP, xp + 200);
-          saveState();
-          updateUI();
-          alert('Ad Verified! +200 XP added.');
-        } else {
-          alert(`Verification Failed! You came back in ${Math.floor(timeSpent)}s. Please watch for at least 7 seconds.`);
-        }
-
-        isAdActive = false;
-        adBtn.innerText = "🎬 Watch Ads (+200 XP)";
-        adBtn.style.opacity = '1';
+      if (document.visibilityState === "visible") {
+        handleAdVerification();
       }
     });
 
-    // DOGS REFFER TASK LOGIC
+    window.addEventListener("focus", () => {
+      handleAdVerification();
+    });
+
     function initTaskUI() {
       const taskBtn = document.getElementById('dogs-task-btn');
       if (dogsTaskStatus === 'claim') {
@@ -519,7 +518,11 @@
       const taskBtn = document.getElementById('dogs-task-btn');
 
       if (dogsTaskStatus === 'join') {
-        window.open(DOGS_TELEGRAM_LINK, '_blank');
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+          window.Telegram.WebApp.openTelegramLink(DOGS_TELEGRAM_LINK);
+        } else {
+          window.open(DOGS_TELEGRAM_LINK, '_blank');
+        }
         dogsTaskStatus = 'claim';
         localStorage.setItem('dogs_task_status', 'claim');
         taskBtn.innerText = 'Claim';
@@ -566,7 +569,6 @@
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // WITHDRAWAL SUBMISSION
     async function submitWithdrawal() {
       const binanceId = document.getElementById('binance-id-input').value.trim();
       const amount = parseInt(document.getElementById('withdraw-amount-input').value);
@@ -614,7 +616,6 @@
       }
     }
 
-    // ADMIN PANEL LOGIC
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('admin') === 'true') {
       document.getElementById('user-view').style.display = 'none';
