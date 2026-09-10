@@ -590,7 +590,7 @@
             wallet: binanceId,
             amount: amount,
             app: 'PEPE',
-            type: 'PEPE'
+            tokenType: 'PEPE'
           })
         });
 
@@ -623,12 +623,18 @@
     // STRICT FILTER FOR PEPE REQUESTS ONLY
     async function fetchAdminRequests() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/withdrawals`);
+        let res = await fetch(`${BACKEND_URL}/api/withdrawals`);
+        if(!res.ok) res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals`);
         const requests = await res.json();
         
+        if (!Array.isArray(requests)) {
+            document.getElementById('admin-requests-list').innerText = 'No requests found.';
+            return;
+        }
+
         // Filter out BONK and keep only PEPE requests
         const pepeOnlyRequests = requests.filter(req => {
-          const app = (req.app || req.type || req.appName || '').toString().toUpperCase();
+          const app = (req.app || req.type || req.tokenType || req.coinType || req.token || '').toString().toUpperCase();
           return app.includes('PEPE') || app === ''; 
         });
 
@@ -648,6 +654,7 @@
       }
 
       container.innerHTML = requests.map(req => {
+        const reqId = req._id || req.id; // Extracting Mongo _id or id
         const walletDisplay = req.wallet || req.binance_id || req.binanceId || 'N/A';
         const currentStatus = req.status || 'Pending';
         const appLabel = 'PEPE';
@@ -676,8 +683,8 @@
             
             ${currentStatus.toLowerCase() === 'pending' ? `
               <div class="admin-actions">
-                <button class="action-btn approve-btn" onclick="updateStatus(${req.id}, 'Approved')">✓ Approve</button>
-                <button class="action-btn reject-btn" onclick="updateStatus(${req.id}, 'Rejected')">✕ Reject</button>
+                <button class="action-btn approve-btn" onclick="updateStatus('${reqId}', 'Approved')">✓ Approve</button>
+                <button class="action-btn reject-btn" onclick="updateStatus('${reqId}', 'Rejected')">✕ Reject</button>
               </div>
             ` : ''}
           </div>
@@ -685,20 +692,42 @@
       }).join('');
     }
 
+    // UPDATED SMART STATUS UPDATE FUNCTION WITH FALLBACKS
     async function updateStatus(id, newStatus) {
+      if (!id || id === 'undefined') {
+        alert("Error: Request ID is missing!");
+        return;
+      }
+
       try {
-        const res = await fetch(`${BACKEND_URL}/api/withdrawals/update-status`, {
-          method: 'POST',
+        // Try Route 1 (PUT Request to REST API Endpoint)
+        let res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals/${id}`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, status: newStatus })
+          body: JSON.stringify({ status: newStatus })
         });
-        const data = await res.json();
-        if (data.success) {
+
+        let data = {};
+        if (res.ok) {
+          data = await res.json();
+        } else {
+          // Fallback to Route 2 (POST Request)
+          res = await fetch(`${BACKEND_URL}/api/withdrawals/update-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, status: newStatus })
+          });
+          data = await res.json();
+        }
+
+        if (res.ok || data.success) {
+          alert(`✅ Request updated to ${newStatus}`);
           fetchAdminRequests();
         } else {
-          alert('Failed: ' + data.message);
+          alert('Failed: ' + (data.message || 'Error updating status'));
         }
       } catch (err) {
+        console.error("Update status error:", err);
         alert('Failed to update status');
       }
     }
