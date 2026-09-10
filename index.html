@@ -387,7 +387,7 @@
   </div>
 
   <div id="admin-view">
-    <h2 style="margin-bottom: 20px; text-align: center;">Withdrawal Requests</h2>
+    <h2 style="margin-bottom: 20px; text-align: center;">PEPE Withdrawal Requests</h2>
     <div id="admin-requests-list">Loading...</div>
   </div>
 
@@ -410,7 +410,6 @@
   </div>
 
   <script>
-    // Initialize Telegram WebApp SDK
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
@@ -464,7 +463,6 @@
       adBtn.innerText = "⏳ Watching Ad... Stay 7s on Ad";
       adBtn.style.opacity = '0.7';
 
-      // Open link using Telegram WebApp SDK if available, else standard window.open
       if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
         window.Telegram.WebApp.openLink(ADSTERRA_LINK);
       } else {
@@ -491,7 +489,6 @@
       adBtn.style.opacity = '1';
     }
 
-    // Double Listener for Desktop & Mobile WebApp focus
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         handleAdVerification();
@@ -623,11 +620,19 @@
       fetchAdminRequests();
     }
 
+    // STRICT FILTER FOR PEPE REQUESTS ONLY
     async function fetchAdminRequests() {
       try {
         const res = await fetch(`${BACKEND_URL}/api/withdrawals`);
         const requests = await res.json();
-        renderAdminRequests(requests);
+        
+        // Filter out BONK and keep only PEPE requests
+        const pepeOnlyRequests = requests.filter(req => {
+          const app = (req.app || req.type || req.appName || '').toString().toUpperCase();
+          return app.includes('PEPE') || app === ''; 
+        });
+
+        renderAdminRequests(pepeOnlyRequests);
       } catch (err) {
         console.error("Fetch Admin Error:", err);
         document.getElementById('admin-requests-list').innerText = 'Failed to load requests.';
@@ -638,21 +643,15 @@
       const container = document.getElementById('admin-requests-list');
       
       if (!requests || requests.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding: 20px; color: #8E8E93;">No pending requests</div>';
+        container.innerHTML = '<div style="text-align:center; padding: 20px; color: #8E8E93;">No pending PEPE requests</div>';
         return;
       }
 
       container.innerHTML = requests.map(req => {
         const walletDisplay = req.wallet || req.binance_id || req.binanceId || 'N/A';
         const currentStatus = req.status || 'Pending';
-
-        const rawApp = req.app || req.type || req.appName || 'PEPE';
-        const appLabel = rawApp.toString().toUpperCase().trim();
-
-        let badgeColor = '#34C759'; 
-        if (appLabel.includes('BONK')) {
-          badgeColor = '#FF9500';  
-        }
+        const appLabel = 'PEPE';
+        const badgeColor = '#34C759'; 
 
         return `
           <div class="admin-card">
