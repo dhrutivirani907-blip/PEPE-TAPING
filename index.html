@@ -290,7 +290,6 @@
       cursor: default;
     }
 
-    /* Modal Styles for Ad Rules */
     .modal-title { font-size: 18px; font-weight: bold; color: #ff3b30; margin-bottom: 12px; text-align: center; }
     .modal-desc { font-size: 14px; color: #e5e5ea; line-height: 1.5; margin-bottom: 18px; text-align: left; }
     .modal-btn {
@@ -381,7 +380,6 @@
     <button class="btn-ads" id="ad-btn" onclick="openInstructionModal()">🎬 Watch Ads (+400 XP)</button>
   </div>
 
-  <!-- Mandatory Instructions Modal Popup -->
   <div class="modal" id="instructionModal">
     <div class="modal-content">
       <div class="modal-title">⚠️ Mandatory Rules</div>
@@ -452,7 +450,6 @@
     const maxXP = 2000;
     let dogsTaskStatus = localStorage.getItem('dogs_task_status') || 'join';
 
-    // Ad Verification Trackers
     let adStartTime = 0;
     let isTrackingAd = false;
     let externalBrowserOpened = false;
@@ -480,7 +477,6 @@
       createFloatingText(e, "+1 PEPE");
     });
 
-    // Modal Control Functions
     function openInstructionModal() {
       document.getElementById("instructionModal").style.display = "flex";
     }
@@ -489,14 +485,13 @@
       document.getElementById("instructionModal").style.display = "none";
     }
 
-    // Tracking App Departure (External Browser Opening)
     function handleVisibilityChange() {
       if (!isTrackingAd) return;
 
       const timeElapsed = (Date.now() - adStartTime) / 1000;
 
       if (document.visibilityState === "hidden" || document.hidden) {
-        if (timeElapsed >= 8) { // User spent enough time before clicking
+        if (timeElapsed >= 8) {
           externalBrowserOpened = true;
         }
       }
@@ -519,7 +514,6 @@
       adBtn.disabled = true;
       adBtn.innerText = "⏳ Watching Ad...";
 
-      // Initialize Ad Tracking State
       adStartTime = Date.now();
       isTrackingAd = true;
       externalBrowserOpened = false;
@@ -543,21 +537,18 @@
       const totalWatchDuration = (Date.now() - adStartTime) / 1000;
       isTrackingAd = false;
 
-      // Condition 1: Minimum watch duration check (10 seconds)
       if (totalWatchDuration < 10) {
         alert("⚠️ Verification Failed!\nAapko kam se kam 10 second ad dekhna zaroori hai.");
         resetAdButtonState();
         return;
       }
 
-      // Condition 2: External Link Opened Check (Did user click ad?)
       if (!externalBrowserOpened) {
         alert("⚠️ Click Verification Failed!\nAapne ad par click nahi kiya (Close button dabane par XP nahi milta). Credit paane ke liye ad par CLICK karna zaroori hai.");
         resetAdButtonState();
         return;
       }
 
-      // Success Reward Logic
       xp = Math.min(maxXP, xp + 400);
       saveState();
       updateUI();
@@ -662,6 +653,7 @@
             wallet: binanceId,
             amount: amount,
             tokenType: 'PEPE',
+            type: 'PEPE',
             app: 'PEPE'
           })
         });
@@ -694,8 +686,7 @@
 
     async function fetchAdminRequests() {
       try {
-        let res = await fetch(`${BACKEND_URL}/api/withdrawals`);
-        if (!res.ok) res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals`);
+        const res = await fetch(`${BACKEND_URL}/api/withdrawals`);
         const requests = await res.json();
         
         if (!Array.isArray(requests)) {
@@ -703,7 +694,13 @@
             return;
         }
 
-        renderAdminRequests(requests);
+        // Filter out requests to only show PEPE app records
+        const pepeRequests = requests.filter(req => {
+            const appType = (req.type || req.tokenType || req.app || '').toUpperCase();
+            return appType === 'PEPE' || appType === '' || !req.type;
+        });
+
+        renderAdminRequests(pepeRequests);
       } catch (err) {
         console.error("Fetch Admin Error:", err);
         document.getElementById('admin-requests-list').innerText = 'Failed to load requests.';
@@ -714,7 +711,7 @@
       const container = document.getElementById('admin-requests-list');
       
       if (!requests || requests.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding: 20px; color: #8E8E93;">No pending requests</div>';
+        container.innerHTML = '<div style="text-align:center; padding: 20px; color: #8E8E93;">No pending PEPE requests</div>';
         return;
       }
 
@@ -722,6 +719,7 @@
         const reqId = req._id || req.id;
         const walletDisplay = req.binanceId || req.wallet || req.binance_id || 'N/A';
         const currentStatus = req.status || 'Pending';
+        const displayTag = req.type || req.tokenType || req.app || 'PEPE';
 
         return `
           <div class="admin-card">
@@ -729,7 +727,7 @@
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="user-id">ID: ${walletDisplay}</span>
                 <span style="background-color: #34C759; color: #000; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 6px;">
-                  ${req.tokenType || req.app || 'PEPE'}
+                  ${displayTag}
                 </span>
               </div>
               <span class="status-badge ${currentStatus.toLowerCase()}">${currentStatus}</span>
@@ -772,7 +770,6 @@
           });
 
           if (res.ok) {
-            const data = await res.json();
             alert(`✅ Status updated to ${newStatus}`);
             updated = true;
             fetchAdminRequests();
