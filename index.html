@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>PEPE Tapping Game & Admin</title>
+  
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Monetag Rewarded Interstitial SDK -->
+  <script src="//libtl.com/sdk.js" data-zone="11766459" data-sdk="show_11766459"></script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -189,7 +193,7 @@
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 0, 0, 0.85);
-      z-index: 100;
+      z-index: 1000;
       justify-content: center;
       align-items: center;
       padding: 20px;
@@ -286,6 +290,14 @@
       cursor: default;
     }
 
+    /* Modal Styles for Ad Rules */
+    .modal-title { font-size: 18px; font-weight: bold; color: #ff3b30; margin-bottom: 12px; text-align: center; }
+    .modal-desc { font-size: 14px; color: #e5e5ea; line-height: 1.5; margin-bottom: 18px; text-align: left; }
+    .modal-btn {
+      background: #34C759; color: black; border: none; padding: 12px; width: 100%;
+      border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer;
+    }
+
     #admin-view {
       display: none;
       width: 100%;
@@ -366,7 +378,24 @@
       <button class="btn" onclick="openModal('task-modal')">🎯 Task</button>
     </div>
 
-    <button class="btn-ads" id="ad-btn" onclick="watchAdWithStrictTimer()">🎬 Watch Ads (+200 XP)</button>
+    <button class="btn-ads" id="ad-btn" onclick="openInstructionModal()">🎬 Watch Ads (+400 XP)</button>
+  </div>
+
+  <!-- Mandatory Instructions Modal Popup -->
+  <div class="modal" id="instructionModal">
+    <div class="modal-content">
+      <div class="modal-title">⚠️ Mandatory Rules</div>
+      <div class="modal-desc">
+        To successfully get <b>+400 XP</b>:
+        <br><br>
+        1️⃣ Watch Ad for at least <b>10 seconds</b>.<br>
+        2️⃣ Click anywhere on the Ad / Continue Button to open browser.<br>
+        3️⃣ Return back to the app.
+        <br><br>
+        <i>Note: Closing ad with X button without visiting link = 0 XP.</i>
+      </div>
+      <button class="modal-btn" onclick="startMonetagAd()">UNDERSTOOD & WATCH AD</button>
+    </div>
   </div>
 
   <div class="modal" id="task-modal">
@@ -415,7 +444,6 @@
     }
 
     const BACKEND_URL = "https://pepe-backend-wkym.onrender.com";
-    const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
     const DOGS_TELEGRAM_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
 
     let balance = Number(localStorage.getItem('pepe_balance')) || 0;
@@ -424,8 +452,10 @@
     const maxXP = 2000;
     let dogsTaskStatus = localStorage.getItem('dogs_task_status') || 'join';
 
-    let isAdActive = false;
+    // Ad Verification Trackers
     let adStartTime = 0;
+    let isTrackingAd = false;
+    let externalBrowserOpened = false;
 
     const balanceDisplay = document.getElementById('balance-display');
     const energyDisplay = document.getElementById('energy-display');
@@ -438,7 +468,7 @@
 
     tapBtn.addEventListener('click', (e) => {
       if (xp < 10) {
-        alert('Not enough XP! Watch Ads to get +200 XP.');
+        alert('Not enough XP! Watch Ads to get +400 XP.');
         return;
       }
 
@@ -450,46 +480,97 @@
       createFloatingText(e, "+1 PEPE");
     });
 
-    function watchAdWithStrictTimer() {
-      if (isAdActive) return;
+    // Modal Control Functions
+    function openInstructionModal() {
+      document.getElementById("instructionModal").style.display = "flex";
+    }
 
-      isAdActive = true;
+    function closeInstructionModal() {
+      document.getElementById("instructionModal").style.display = "none";
+    }
+
+    // Tracking App Departure (External Browser Opening)
+    function handleVisibilityChange() {
+      if (!isTrackingAd) return;
+
+      const timeElapsed = (Date.now() - adStartTime) / 1000;
+
+      if (document.visibilityState === "hidden" || document.hidden) {
+        if (timeElapsed >= 8) { // User spent enough time before clicking
+          externalBrowserOpened = true;
+        }
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleVisibilityChange);
+
+    function startMonetagAd() {
+      closeInstructionModal();
+
+      const adTriggerFunction = window.show_11766459 || (typeof show_11766459 === "function" ? show_11766459 : null);
+
+      if (!adTriggerFunction) {
+        alert("⚠️ Ad SDK load nahi hui. Please AdBlocker disable karke check karein.");
+        resetAdButtonState();
+        return;
+      }
+
+      adBtn.disabled = true;
+      adBtn.innerText = "⏳ Watching Ad...";
+
+      // Initialize Ad Tracking State
       adStartTime = Date.now();
+      isTrackingAd = true;
+      externalBrowserOpened = false;
 
-      adBtn.innerText = "⏳ Watching Ad... Stay 7s on Ad";
-      adBtn.style.opacity = '0.7';
-
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-        window.Telegram.WebApp.openLink(ADSTERRA_LINK);
-      } else {
-        window.open(ADSTERRA_LINK, '_blank');
+      try {
+        adTriggerFunction()
+          .then(() => { 
+            setTimeout(verifyAdRules, 500); 
+          })
+          .catch((err) => {
+            alert("⚠️ Ad was closed or interrupted.");
+            resetAdButtonState();
+          });
+      } catch (err) {
+        alert("⚠️ Could not launch ad.");
+        resetAdButtonState();
       }
     }
 
-    function handleAdVerification() {
-      if (!isAdActive) return;
+    function verifyAdRules() {
+      const totalWatchDuration = (Date.now() - adStartTime) / 1000;
+      isTrackingAd = false;
 
-      const timeSpent = (Date.now() - adStartTime) / 1000;
-
-      if (timeSpent >= 7) {
-        xp = Math.min(maxXP, xp + 200);
-        saveState();
-        updateUI();
-        alert('Ad Verified! +200 XP added.');
-      } else {
-        alert(`Verification Failed! You came back in ${Math.floor(timeSpent)}s. Please watch for at least 7 seconds.`);
+      // Condition 1: Minimum watch duration check (10 seconds)
+      if (totalWatchDuration < 10) {
+        alert("⚠️ Verification Failed!\nAapko kam se kam 10 second ad dekhna zaroori hai.");
+        resetAdButtonState();
+        return;
       }
 
-      isAdActive = false;
-      adBtn.innerText = "🎬 Watch Ads (+200 XP)";
-      adBtn.style.opacity = '1';
+      // Condition 2: External Link Opened Check (Did user click ad?)
+      if (!externalBrowserOpened) {
+        alert("⚠️ Click Verification Failed!\nAapne ad par click nahi kiya (Close button dabane par XP nahi milta). Credit paane ke liye ad par CLICK karna zaroori hai.");
+        resetAdButtonState();
+        return;
+      }
+
+      // Success Reward Logic
+      xp = Math.min(maxXP, xp + 400);
+      saveState();
+      updateUI();
+      alert("🎉 Ad Verified! +400 XP added successfully.");
+      resetAdButtonState();
     }
 
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") handleAdVerification();
-    });
-
-    window.addEventListener("focus", handleAdVerification);
+    function resetAdButtonState() {
+      isTrackingAd = false;
+      externalBrowserOpened = false;
+      adBtn.disabled = false;
+      adBtn.innerText = "🎬 Watch Ads (+400 XP)";
+    }
 
     function initTaskUI() {
       const taskBtn = document.getElementById('dogs-task-btn');
@@ -667,7 +748,6 @@
       }).join('');
     }
 
-    // SMART MULTI-ROUTE STATUS UPDATE
     async function updateStatus(id, newStatus) {
       if (!id || id === 'undefined') {
         alert("Error: Invalid Request ID!");
