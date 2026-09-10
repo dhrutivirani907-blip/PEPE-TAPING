@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>PEPE Tapping Game & Admin</title>
-  <!-- Telegram WebApp SDK Script -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * {
@@ -419,11 +418,8 @@
     const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/mag701y1?key=e6dcf81d34580abdf64766ac0be7e76d";
     const DOGS_TELEGRAM_LINK = "https://t.me/quickdogss_Bot?start=1912015558";
 
-    let balance = Number(localStorage.getItem('pepe_balance'));
-    if (isNaN(balance) || balance === null) balance = 0;
-
-    let xp = Number(localStorage.getItem('pepe_xp'));
-    if (isNaN(xp) || xp === null) xp = 0;
+    let balance = Number(localStorage.getItem('pepe_balance')) || 0;
+    let xp = Number(localStorage.getItem('pepe_xp')) || 0;
 
     const maxXP = 2000;
     let dogsTaskStatus = localStorage.getItem('dogs_task_status') || 'join';
@@ -447,7 +443,7 @@
       }
 
       xp = Math.max(0, xp - 10);
-      balance = balance + 1;
+      balance += 1;
 
       saveState();
       updateUI();
@@ -490,14 +486,10 @@
     }
 
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        handleAdVerification();
-      }
+      if (document.visibilityState === "visible") handleAdVerification();
     });
 
-    window.addEventListener("focus", () => {
-      handleAdVerification();
-    });
+    window.addEventListener("focus", handleAdVerification);
 
     function initTaskUI() {
       const taskBtn = document.getElementById('dogs-task-btn');
@@ -534,14 +526,13 @@
         taskBtn.innerText = 'Claimed';
         taskBtn.classList.add('claimed');
         taskBtn.onclick = null;
-        alert('Task Completed! +200 PEPE Coins added to your balance.');
+        alert('Task Completed! +200 PEPE Coins added.');
       }
     }
 
     function updateUI() {
       balanceDisplay.innerText = balance.toLocaleString();
       energyDisplay.innerText = `${xp} / ${maxXP} XP`;
-      
       const percentage = (xp / maxXP) * 100;
       energyBar.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
     }
@@ -581,7 +572,7 @@
       }
 
       try {
-        const response = await fetch(`${BACKEND_URL}/api/withdraw`, {
+        const response = await fetch(`${BACKEND_URL}/api/bonk/withdraw`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -589,14 +580,13 @@
             binanceId: binanceId,
             wallet: binanceId,
             amount: amount,
-            app: 'PEPE',
             tokenType: 'PEPE'
           })
         });
 
         const data = await response.json();
 
-        if (data.success) {
+        if (data.success || response.ok) {
           balance -= amount;
           saveState();
           updateUI();
@@ -605,7 +595,7 @@
           document.getElementById('binance-id-input').value = '';
           document.getElementById('withdraw-amount-input').value = '';
         } else {
-          alert('Error: ' + data.message);
+          alert('Error: ' + (data.message || 'Submission failed'));
         }
       } catch (error) {
         console.error("Submit error:", error);
@@ -620,11 +610,9 @@
       fetchAdminRequests();
     }
 
-    // STRICT FILTER FOR PEPE REQUESTS ONLY
     async function fetchAdminRequests() {
       try {
-        let res = await fetch(`${BACKEND_URL}/api/withdrawals`);
-        if(!res.ok) res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals`);
+        const res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals`);
         const requests = await res.json();
         
         if (!Array.isArray(requests)) {
@@ -632,10 +620,9 @@
             return;
         }
 
-        // Filter out BONK and keep only PEPE requests
         const pepeOnlyRequests = requests.filter(req => {
-          const app = (req.app || req.type || req.tokenType || req.coinType || req.token || '').toString().toUpperCase();
-          return app.includes('PEPE') || app === ''; 
+          const token = (req.tokenType || req.coinType || req.token || req.app || '').toString().toUpperCase();
+          return token === 'PEPE'; 
         });
 
         renderAdminRequests(pepeOnlyRequests);
@@ -654,32 +641,23 @@
       }
 
       container.innerHTML = requests.map(req => {
-        const reqId = req._id || req.id; // Extracting Mongo _id or id
-        const walletDisplay = req.wallet || req.binance_id || req.binanceId || 'N/A';
+        const reqId = req._id || req.id;
+        const walletDisplay = req.binanceId || req.wallet || req.binance_id || 'N/A';
         const currentStatus = req.status || 'Pending';
-        const appLabel = 'PEPE';
-        const badgeColor = '#34C759'; 
 
         return `
           <div class="admin-card">
             <div class="admin-card-header">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="user-id">ID: ${walletDisplay}</span>
-                <span style="
-                  background-color: ${badgeColor}; 
-                  color: #000; 
-                  font-size: 11px; 
-                  font-weight: bold; 
-                  padding: 2px 8px; 
-                  border-radius: 6px;
-                  text-transform: uppercase;">
-                  ${appLabel}
+                <span style="background-color: #34C759; color: #000; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 6px;">
+                  PEPE
                 </span>
               </div>
               <span class="status-badge ${currentStatus.toLowerCase()}">${currentStatus}</span>
             </div>
             
-            <div class="amount-display">${Number(req.amount).toLocaleString()} ${appLabel}</div>
+            <div class="amount-display">${Number(req.amount).toLocaleString()} PEPE</div>
             
             ${currentStatus.toLowerCase() === 'pending' ? `
               <div class="admin-actions">
@@ -692,39 +670,26 @@
       }).join('');
     }
 
-    // UPDATED SMART STATUS UPDATE FUNCTION WITH FALLBACKS
     async function updateStatus(id, newStatus) {
       if (!id || id === 'undefined') {
-        alert("Error: Request ID is missing!");
+        alert("Error: Invalid Request ID!");
         return;
       }
 
       try {
-        // Try Route 1 (PUT Request to REST API Endpoint)
-        let res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals/${id}`, {
+        const res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus })
         });
 
-        let data = {};
-        if (res.ok) {
-          data = await res.json();
-        } else {
-          // Fallback to Route 2 (POST Request)
-          res = await fetch(`${BACKEND_URL}/api/withdrawals/update-status`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, status: newStatus })
-          });
-          data = await res.json();
-        }
+        const data = await res.json();
 
-        if (res.ok || data.success) {
-          alert(`✅ Request updated to ${newStatus}`);
+        if (res.ok) {
+          alert(`✅ Status updated to ${newStatus}`);
           fetchAdminRequests();
         } else {
-          alert('Failed: ' + (data.message || 'Error updating status'));
+          alert('Failed: ' + (data.message || 'Server error'));
         }
       } catch (err) {
         console.error("Update status error:", err);
