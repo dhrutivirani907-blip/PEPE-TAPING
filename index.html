@@ -572,7 +572,7 @@
       }
 
       try {
-        const response = await fetch(`${BACKEND_URL}/api/bonk/withdraw`, {
+        const response = await fetch(`${BACKEND_URL}/api/withdraw`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -580,7 +580,8 @@
             binanceId: binanceId,
             wallet: binanceId,
             amount: amount,
-            tokenType: 'PEPE'
+            tokenType: 'PEPE',
+            app: 'PEPE'
           })
         });
 
@@ -612,7 +613,8 @@
 
     async function fetchAdminRequests() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals`);
+        let res = await fetch(`${BACKEND_URL}/api/withdrawals`);
+        if (!res.ok) res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals`);
         const requests = await res.json();
         
         if (!Array.isArray(requests)) {
@@ -620,12 +622,7 @@
             return;
         }
 
-        const pepeOnlyRequests = requests.filter(req => {
-          const token = (req.tokenType || req.coinType || req.token || req.app || '').toString().toUpperCase();
-          return token === 'PEPE'; 
-        });
-
-        renderAdminRequests(pepeOnlyRequests);
+        renderAdminRequests(requests);
       } catch (err) {
         console.error("Fetch Admin Error:", err);
         document.getElementById('admin-requests-list').innerText = 'Failed to load requests.';
@@ -636,7 +633,7 @@
       const container = document.getElementById('admin-requests-list');
       
       if (!requests || requests.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding: 20px; color: #8E8E93;">No pending PEPE requests</div>';
+        container.innerHTML = '<div style="text-align:center; padding: 20px; color: #8E8E93;">No pending requests</div>';
         return;
       }
 
@@ -651,7 +648,7 @@
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="user-id">ID: ${walletDisplay}</span>
                 <span style="background-color: #34C759; color: #000; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 6px;">
-                  PEPE
+                  ${req.tokenType || req.app || 'PEPE'}
                 </span>
               </div>
               <span class="status-badge ${currentStatus.toLowerCase()}">${currentStatus}</span>
@@ -670,30 +667,44 @@
       }).join('');
     }
 
+    // SMART MULTI-ROUTE STATUS UPDATE
     async function updateStatus(id, newStatus) {
       if (!id || id === 'undefined') {
         alert("Error: Invalid Request ID!");
         return;
       }
 
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/bonk/withdrawals/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus })
-        });
+      const endpoints = [
+        { url: `${BACKEND_URL}/api/withdrawals/${id}`, method: 'PUT', body: { status: newStatus } },
+        { url: `${BACKEND_URL}/api/withdrawals/status`, method: 'PUT', body: { id, status: newStatus } },
+        { url: `${BACKEND_URL}/api/withdraw/status`, method: 'POST', body: { id, status: newStatus } },
+        { url: `${BACKEND_URL}/api/withdrawals/update`, method: 'POST', body: { id, status: newStatus } }
+      ];
 
-        const data = await res.json();
+      let updated = false;
 
-        if (res.ok) {
-          alert(`✅ Status updated to ${newStatus}`);
-          fetchAdminRequests();
-        } else {
-          alert('Failed: ' + (data.message || 'Server error'));
+      for (let endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint.url, {
+            method: endpoint.method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(endpoint.body)
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            alert(`✅ Status updated to ${newStatus}`);
+            updated = true;
+            fetchAdminRequests();
+            break;
+          }
+        } catch (e) {
+          console.log(`Failed endpoint: ${endpoint.url}`);
         }
-      } catch (err) {
-        console.error("Update status error:", err);
-        alert('Failed to update status');
+      }
+
+      if (!updated) {
+        alert("Server Error: Backend API update route missing.");
       }
     }
   </script>
