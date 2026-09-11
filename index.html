@@ -377,14 +377,14 @@
       <button class="btn" onclick="openModal('task-modal')">🎯 Task</button>
     </div>
 
-    <button class="btn-ads" id="ad-btn" onclick="openInstructionModal()">🎬 Watch Ads (+400 XP)</button>
+  <button class="btn-ads" id="ad-btn" onclick="openInstructionModal()">🎬 Watch Ads (+250 XP)</button>
   </div>
 
   <div class="modal" id="instructionModal">
     <div class="modal-content">
       <div class="modal-title">⚠️ Mandatory Rules</div>
       <div class="modal-desc">
-        To successfully get <b>+400 XP</b>:
+    To successfully get <b>+250 XP</b>:
         <br><br>
         1️⃣ Watch Ad for at least <b>10 seconds</b>.<br>
         2️⃣ Click anywhere on the Ad / Continue Button to open browser.<br>
@@ -549,10 +549,10 @@
         return;
       }
 
-      xp = Math.min(maxXP, xp + 400);
+      xp = Math.min(maxXP, xp + 250);
       saveState();
       updateUI();
-      alert("🎉 Ad Verified! +400 XP added successfully.");
+      alert("🎉 Ad Verified! +250 XP added successfully.");
       resetAdButtonState();
     }
 
@@ -560,7 +560,7 @@
       isTrackingAd = false;
       externalBrowserOpened = false;
       adBtn.disabled = false;
-      adBtn.innerText = "🎬 Watch Ads (+400 XP)";
+      adBtn.innerText = "🎬 Watch Ads (+250 XP)";
     }
 
     function initTaskUI() {
