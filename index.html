@@ -377,20 +377,17 @@
       <button class="btn" onclick="openModal('task-modal')">🎯 Task</button>
     </div>
 
-  <button class="btn-ads" id="ad-btn" onclick="openInstructionModal()">🎬 Watch Ads (+250 XP)</button>
+    <button class="btn-ads" id="ad-btn" onclick="openInstructionModal()">🎬 Watch Ads (+250 XP)</button>
   </div>
 
   <div class="modal" id="instructionModal">
     <div class="modal-content">
       <div class="modal-title">⚠️ Mandatory Rules</div>
       <div class="modal-desc">
-    To successfully get <b>+250 XP</b>:
+        To successfully get <b>+250 XP</b>:
         <br><br>
         1️⃣ Watch Ad for at least <b>10 seconds</b>.<br>
-        2️⃣ Click anywhere on the Ad / Continue Button to open browser.<br>
-        3️⃣ Return back to the app.
-        <br><br>
-        <i>Note: Closing ad with X button without visiting link = 0 XP.</i>
+        2️⃣ Return back to the app to claim reward.
       </div>
       <button class="modal-btn" onclick="startMonetagAd()">UNDERSTOOD & WATCH AD</button>
     </div>
@@ -451,8 +448,6 @@
     let dogsTaskStatus = localStorage.getItem('dogs_task_status') || 'join';
 
     let adStartTime = 0;
-    let isTrackingAd = false;
-    let externalBrowserOpened = false;
 
     const balanceDisplay = document.getElementById('balance-display');
     const energyDisplay = document.getElementById('energy-display');
@@ -465,7 +460,7 @@
 
     tapBtn.addEventListener('click', (e) => {
       if (xp < 10) {
-        alert('Not enough XP! Watch Ads to get +400 XP.');
+        alert('Not enough XP! Watch Ads to get +250 XP.');
         return;
       }
 
@@ -485,21 +480,6 @@
       document.getElementById("instructionModal").style.display = "none";
     }
 
-    function handleVisibilityChange() {
-      if (!isTrackingAd) return;
-
-      const timeElapsed = (Date.now() - adStartTime) / 1000;
-
-      if (document.visibilityState === "hidden" || document.hidden) {
-        if (timeElapsed >= 8) {
-          externalBrowserOpened = true;
-        }
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleVisibilityChange);
-
     function startMonetagAd() {
       closeInstructionModal();
 
@@ -515,8 +495,6 @@
       adBtn.innerText = "⏳ Watching Ad...";
 
       adStartTime = Date.now();
-      isTrackingAd = true;
-      externalBrowserOpened = false;
 
       try {
         adTriggerFunction()
@@ -535,16 +513,9 @@
 
     function verifyAdRules() {
       const totalWatchDuration = (Date.now() - adStartTime) / 1000;
-      isTrackingAd = false;
 
       if (totalWatchDuration < 10) {
         alert("⚠️ Verification Failed!\nAapko kam se kam 10 second ad dekhna zaroori hai.");
-        resetAdButtonState();
-        return;
-      }
-
-      if (!externalBrowserOpened) {
-        alert("⚠️ Click Verification Failed!\nAapne ad par click nahi kiya (Close button dabane par XP nahi milta). Credit paane ke liye ad par CLICK karna zaroori hai.");
         resetAdButtonState();
         return;
       }
@@ -557,8 +528,6 @@
     }
 
     function resetAdButtonState() {
-      isTrackingAd = false;
-      externalBrowserOpened = false;
       adBtn.disabled = false;
       adBtn.innerText = "🎬 Watch Ads (+250 XP)";
     }
@@ -694,7 +663,6 @@
             return;
         }
 
-        // Filter out requests to only show PEPE app records
         const pepeRequests = requests.filter(req => {
             const appType = (req.type || req.tokenType || req.app || '').toUpperCase();
             return appType === 'PEPE' || appType === '' || !req.type;
